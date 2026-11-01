@@ -10,7 +10,7 @@
         @elseif($crm->isManager()) أرقام فريقك، وتقدر تفلتر بموظف.
         @else كل موظفي المبيعات، وتقدر تفلتر بموظف.
         @endif
-        كل تقرير له فترة (النهارده، الأسبوع، الشهر، أو فترة محددة) ويتصدّر CSV.
+        كل تقرير له فترة (النهارده، الأسبوع، الشهر، أو فترة محددة)@if($crm->can('reports.export'))<span> ويتصدّر CSV</span>@endif.
     </p>
 
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px">

@@ -104,7 +104,7 @@
                             <li class="crm-muted" style="padding: 10px 0; font-size: 12px">مفيش.</li>
                         @endforelse
                     </ul>
-                    <div class="crm-dashlet-foot"><a href="{{ route($crm->route('activities.create'), ['lead' => $activity->lead->id]) }}">＋ جدولة نشاط تاني</a></div>
+                    @if($crm->can('activities.create'))<div class="crm-dashlet-foot"><a href="{{ route($crm->route('activities.create'), ['lead' => $activity->lead->id]) }}">＋ جدولة نشاط تاني</a></div>@endif
                 </section>
             @endif
         </aside>

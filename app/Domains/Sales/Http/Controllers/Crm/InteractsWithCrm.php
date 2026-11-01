@@ -3,6 +3,7 @@
 namespace App\Domains\Sales\Http\Controllers\Crm;
 
 use App\Domains\Sales\Support\CrmNavigation;
+use App\Domains\Sales\Support\CrmPermissions;
 use App\Domains\Sales\Support\CrmScope;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,9 +13,16 @@ use Illuminate\View\View;
 /** مشترك بين controllers شاشات CRM: النطاق حسب الدور وإطار الصفحة. */
 trait InteractsWithCrm
 {
+    /** النطاق حسب الدور، مع منع الدخول لوحدة قفلتها الإدارة (CrmPermissions). */
     private function scope(Request $request): CrmScope
     {
-        return CrmScope::for(Auth::user(), str_starts_with((string) $request->route()?->getName(), 'admin.'));
+        $name = (string) $request->route()?->getName();
+        $scope = CrmScope::for(Auth::user(), str_starts_with($name, 'admin.'));
+
+        $module = explode('.', (string) preg_replace('/^(admin|employee)\.crm\./', '', $name))[0];
+        abort_if(isset(CrmPermissions::MODULES[$module]) && ! $scope->can($module.'.access'), 403, 'الوحدة دي مقفولة لدورك من إعدادات CRM.');
+
+        return $scope;
     }
 
     private function view(CrmScope $scope, string $module, string $view, array $data): View

@@ -70,8 +70,8 @@
                     <div style="position: relative" @click.outside="bulk = false">
                         <button type="button" class="crm-btn crm-btn-muted crm-btn-sm" @click="bulk = ! bulk" :disabled="selected === 0" :style="selected === 0 ? 'opacity:.6' : ''">إجراء جماعي <span x-text="selected ? '(' + selected + ')' : ''"></span> <i class="fas fa-caret-down"></i></button>
                         <div x-cloak x-show="bulk" class="crm-card" style="position: absolute; top: 32px; right: 0; z-index: 20; min-width: 260px; padding: 10px; display: flex; flex-direction: column; gap: 8px; color: #212529">
-                            <button type="submit" name="action" value="export" class="crm-btn crm-btn-outline" style="justify-content: flex-start">تصدير المحددين (CSV)</button>
-                            @if($crm->canManage() && $members->isNotEmpty())
+                            @if($crm->can('leads.export'))<button type="submit" name="action" value="export" class="crm-btn crm-btn-outline" style="justify-content: flex-start">تصدير المحددين (CSV)</button>@endif
+                            @if($crm->canTransfer() && $members->isNotEmpty())
                                 <label class="crm-label">تحويل المحددين لـ
                                     <select class="crm-select" name="to_user_id"><option value="">— اختر —</option>@foreach($members as $m)<option value="{{ $m->id }}">{{ $m->name }}</option>@endforeach</select>
                                 </label>

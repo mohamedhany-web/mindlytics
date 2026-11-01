@@ -13,9 +13,11 @@ use App\Domains\Sales\Models\SalesActivity;
 use App\Domains\Sales\Models\SalesLead;
 use App\Domains\Sales\Models\SalesPlannedActivity;
 use App\Domains\Sales\Models\SalesTeam;
+use App\Domains\Sales\Support\CrmPermissions;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 
@@ -42,6 +44,8 @@ class SalesCrmSmokeTest extends SmokeTestCase
     {
         parent::setUp();
         Queue::fake();
+        Storage::fake('local'); // صلاحيات CRM بتتقري من ملف؛ كل اختبار يبدأ بالافتراضي
+        CrmPermissions::flush();
         $this->admin = User::where('role', 'super_admin')->where('is_active', true)->firstOrFail();
         $salesJob = EmployeeJob::where('code', 'sales')->firstOrFail();
         $this->rep = User::where('employee_job_id', $salesJob->id)->where('is_active', true)->firstOrFail();
@@ -370,6 +374,77 @@ class SalesCrmSmokeTest extends SmokeTestCase
     }
 
     /** يفتح كل روابط الشريط العلوي (قوائم الوحدات و«+») للدور الحالي: ممنوع 403 أو 404 أو 500. */
+    public function test_admin_edits_crm_permissions_and_screens_enforce_them(): void
+    {
+        $this->actingAs($this->admin);
+        $this->page('/admin/crm/settings')->assertSee('صلاحيات الوحدات والإجراءات')->assertSee('تقرير أسباب الخسارة');
+        $this->page('/admin/crm/settings?tab=users')->assertSee($this->rep->name)->assertSee($this->manager->name);
+        $this->page('/admin/crm/settings?tab=users&user='.$this->rep->id)->assertSee('زي الدور');
+        $this->page('/admin/crm/settings?tab=setup')->assertSee('فرق المبيعات');
+        $this->page('/admin/crm')->assertSee('إعدادات CRM والصلاحيات');
+
+        // الافتراضي = السلوك الحالي
+        $this->assertTrue(CrmPermissions::all()['roles']['rep']['leads.export']);
+        $this->assertArrayNotHasKey('leads.transfer', CrmPermissions::all()['roles']['rep'], 'transfer never applies to reps');
+
+        // الإدارة تقفل التقارير والتصدير على الموظف، والكاليندر المشترك وتكليف الآخرين على المدير
+        $perm = [];
+        foreach (['rep', 'manager'] as $role) {
+            foreach (CrmPermissions::defaults($role) as $key => $on) {
+                $perm[$role][str_replace('.', '__', $key)] = 1;
+            }
+        }
+        unset($perm['rep']['reports__access'], $perm['rep']['leads__export'], $perm['manager']['calendar__shared'], $perm['manager']['activities__assign_others'], $perm['manager']['reports__lost']);
+        $this->put('/admin/crm/settings/roles', ['perm' => $perm])->assertRedirect('/admin/crm/settings?tab=roles');
+        CrmPermissions::flush();
+        $this->assertFalse(CrmPermissions::all()['roles']['rep']['reports.access']);
+        $this->assertTrue(CrmPermissions::all()['roles']['rep']['leads.access']);
+
+        $this->actingAs($this->rep);
+        $home = $this->page('/employee/crm');
+        $this->assertStringNotContainsString('/employee/crm/reports', $home->getContent(), 'locked module tab is hidden');
+        $this->assertNavLinksWork($home);
+        $this->get('/employee/crm/reports')->assertForbidden();
+        $this->get('/employee/crm/reports/performance')->assertForbidden();
+        $this->page('/employee/crm/leads')->assertDontSee('تصدير المحددين (CSV)');
+        $this->post('/employee/crm/leads/bulk', ['action' => 'export', 'ids' => [$this->repLead->id]])->assertForbidden();
+
+        $this->actingAs($this->manager);
+        $this->page('/employee/crm/reports')->assertDontSee('أسباب الخسارة');
+        $this->get('/employee/crm/reports/lost')->assertForbidden();
+        $this->page('/employee/crm/calendar?view=shared')->assertDontSee('الكاليندر المشترك للفريق');
+        $this->post('/employee/crm/activities', ['kind' => 'call', 'title' => 'Smoke locked assign', 'sales_lead_id' => $this->repLead->id, 'assigned_to' => $this->rep->id, 'starts_at' => now()->addDay()->format('Y-m-d\TH:i')])
+            ->assertSessionHasErrors('assigned_to');
+        $this->assertNavLinksWork($this->page('/employee/crm'));
+
+        // استثناء لموظف بعينه بيغلب الدور، والأدمن مش بيتأثر
+        $this->actingAs($this->admin);
+        $this->put('/admin/crm/settings/users/'.$this->rep->id, ['perm' => ['reports__access' => 'allow', 'reports__export' => 'deny', 'leads__access' => '']])
+            ->assertRedirect('/admin/crm/settings?tab=users&user='.$this->rep->id);
+        CrmPermissions::flush();
+        $this->assertSame(['reports.access' => true, 'reports.export' => false], CrmPermissions::all()['users'][$this->rep->id]);
+        $this->get('/admin/crm/reports/lost?export=csv')->assertOk();
+
+        $this->actingAs($this->rep);
+        $this->page('/employee/crm/reports/performance')->assertDontSee('تصدير CSV');
+        $this->get('/employee/crm/reports/performance?export=csv')->assertForbidden();
+        $this->actingAs($this->outsider);
+        $this->get('/employee/crm/reports')->assertForbidden();
+
+        // الإعدادات للأدمن بس، والرجوع للافتراضي
+        $this->assertNotSame(200, $this->actingAs($this->manager)->get('/admin/crm/settings')->getStatusCode());
+        $this->actingAs($this->rep)->put('/admin/crm/settings/roles', ['reset' => 1]);
+        CrmPermissions::flush();
+        $this->assertFalse(CrmPermissions::all()['roles']['rep']['reports.access'], 'a rep cannot change CRM permissions');
+        $this->actingAs($this->admin)->put('/admin/crm/settings/roles', ['reset' => 1])->assertRedirect();
+        $this->actingAs($this->admin)->put('/admin/crm/settings/users/'.$this->rep->id, ['reset' => 1])->assertRedirect();
+        CrmPermissions::flush();
+        $this->assertSame(CrmPermissions::defaults('rep'), CrmPermissions::all()['roles']['rep']);
+        $this->assertSame([], CrmPermissions::all()['users']);
+        $this->actingAs($this->rep);
+        $this->page('/employee/crm/reports');
+    }
+
     private function assertNavLinksWork(TestResponse $page): void
     {
         preg_match_all('/<div class="crm-menu"[^>]*>(.*?)<\/div>/s', $page->getContent(), $menus);

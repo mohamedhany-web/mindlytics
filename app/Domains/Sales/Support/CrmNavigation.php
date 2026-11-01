@@ -49,11 +49,11 @@ final class CrmNavigation
             ],
             [
                 'key' => 'activities', 'label' => 'الأنشطة', 'route' => $scope->route('activities.index'),
-                'items' => [
-                    ['عرض الأنشطة', $scope->route('activities.index')],
-                    ['＋ جدولة نشاط', $scope->route('activities.create')],
-                    ['المتأخرة', $scope->route('activities.index'), ['quick' => 'overdue']],
-                ],
+                'items' => array_merge(
+                    [['عرض الأنشطة', $scope->route('activities.index')]],
+                    $scope->can('activities.create') ? [['＋ جدولة نشاط', $scope->route('activities.create')]] : [],
+                    [['المتأخرة', $scope->route('activities.index'), ['quick' => 'overdue']]],
+                ),
             ],
             [
                 'key' => 'inbox', 'label' => 'المحادثات', 'route' => $scope->route('inbox'),
@@ -68,7 +68,7 @@ final class CrmNavigation
                 'key' => 'calendar', 'label' => 'الكاليندر', 'route' => $scope->route('calendar'),
                 'items' => array_merge(
                     [['كاليندر الأنشطة', $scope->route('calendar')]],
-                    $scope->isRep() ? [] : [['الكاليندر المشترك للفريق', $scope->route('calendar'), ['view' => 'shared']]],
+                    $scope->isRep() || ! $scope->can('calendar.shared') ? [] : [['الكاليندر المشترك للفريق', $scope->route('calendar'), ['view' => 'shared']]],
                     $scope->isRep() ? [['جدول الشيفتات', 'employee.sales.shifts.index']] : [],
                     $scope->isManager() ? [['تقويم الحضور والإجازات', 'employee.sales-manager.schedule-calendar.index'], ['شيفتات الفريق', 'employee.sales-manager.shifts.index'], ['طلبات تبديل الشيفت', 'employee.sales-manager.shift-swaps.index']] : [],
                     $scope->isAdmin() ? [['تقويم الشيفت', 'admin.sales.schedule-calendar.index'], ['الشيفتات والقنوات', 'admin.sales.shifts.index']] : [],
@@ -77,7 +77,8 @@ final class CrmNavigation
             [
                 'key' => 'reports', 'label' => 'التقارير', 'route' => $scope->route('reports.index'),
                 'items' => array_merge(
-                    [['كل التقارير', $scope->route('reports.index')], ['أداء الموظفين', $scope->route('reports.show'), ['report' => 'performance']], ['النشاط اليومي', $scope->route('reports.show'), ['report' => 'daily']], ['الصفقات والإيراد', $scope->route('reports.show'), ['report' => 'deals']]],
+                    [['كل التقارير', $scope->route('reports.index')]],
+                    array_values(array_filter([['أداء الموظفين', $scope->route('reports.show'), ['report' => 'performance']], ['النشاط اليومي', $scope->route('reports.show'), ['report' => 'daily']], ['الصفقات والإيراد', $scope->route('reports.show'), ['report' => 'deals']]], fn ($i) => $scope->can('reports.'.$i[2]['report']))),
                     $scope->isRep() ? [['KPIs والأداء', 'employee.sales.kpi.index'], ['التقرير اليومي', 'employee.sales.daily-reports.index'], ['تقارير الأداء', 'employee.sales.reports.index'], ['خصومات KPI', 'employee.sales.penalties.index']] : [],
                     $scope->isManager() ? [['مركز الرقابة اليومية', 'employee.sales-manager.scorecard.index'], ['KPIs والأهداف', 'employee.sales-manager.kpi.index'], ['اللوحة الحية', 'employee.sales-manager.live-board'], ['التقارير اليومية', 'employee.sales-manager.daily-reports.index'], ['تقرير الفريق للإدارة', 'employee.sales-manager.team-reports.index'], ['تقارير الكامبين', 'employee.sales-manager.campaign-reports.index']] : [],
                     $scope->isAdmin() ? [['تقارير المبيعات', 'admin.sales.reports.index'], ['مراقبة KPIs', 'admin.sales.kpi.index'], ['التقارير اليومية', 'admin.sales.daily-reports.index'], ['تقارير الفرق', 'admin.sales.team-daily-reports.index'], ['Insights الموظفين', 'admin.sales.insights.index'], ['تدقيق استخدام CRM', 'admin.sales.crm-compliance.index']] : [],
@@ -88,13 +89,16 @@ final class CrmNavigation
                 'items' => array_merge(
                     $scope->isRep() ? [['معلومات الكورسات', 'employee.sales.course-board.index'], ['قواعد المبيعات', 'employee.sales.policy.index'], ['الواجهة القديمة للمبيعات', 'employee.sales.dashboard'], ['لوحة الموظف', 'employee.dashboard']] : [],
                     $scope->isManager() ? [['حضور الفريق', 'employee.sales-manager.attendance.index'], ['الحضور الحي', 'employee.sales-manager.presence.index'], ['هيكل الفريق', 'employee.sales-manager.org-chart.index'], ['أهداف الشهر', 'employee.sales-manager.kpi.targets'], ['الواجهة القديمة للمدير', 'employee.sales-manager.dashboard'], ['لوحة الموظف', 'employee.dashboard']] : [],
-                    $scope->isAdmin() ? [['فرق المبيعات', 'admin.sales.sales-teams.index'], ['تصنيفات العملاء', 'admin.sales.categories.index'], ['أنواع الاهتمام', 'admin.sales.interest-types.index'], ['تخصصات السيلز', 'admin.sales.specialties.index'], ['قواعد السيلز', 'admin.sales.policy.index'], ['أهداف المبيعات', 'admin.sales.kpi.targets'], ['سجل أنشطة المبيعات', 'admin.sales.audit-log.index'], ['لوحة الإدارة', 'admin.dashboard']] : [],
+                    $scope->isAdmin() ? [['⚙ إعدادات CRM والصلاحيات', 'admin.crm.settings.index'], ['فرق المبيعات', 'admin.sales.sales-teams.index'], ['تصنيفات العملاء', 'admin.sales.categories.index'], ['أنواع الاهتمام', 'admin.sales.interest-types.index'], ['تخصصات السيلز', 'admin.sales.specialties.index'], ['قواعد السيلز', 'admin.sales.policy.index'], ['أهداف المبيعات', 'admin.sales.kpi.targets'], ['سجل أنشطة المبيعات', 'admin.sales.audit-log.index'], ['لوحة الإدارة', 'admin.dashboard']] : [],
                 ),
             ],
         ];
 
         $out = [];
         foreach ($tabs as $tab) {
+            if (isset(CrmPermissions::MODULES[$tab['key']]) && ! $scope->can($tab['key'].'.access')) {
+                continue;
+            }
             $items = [];
             foreach ($tab['items'] as $item) {
                 [$label, $route] = $item;
@@ -120,7 +124,9 @@ final class CrmNavigation
             $scope->isAdmin() => [['عميل محتمل', 'admin.sales.leads.create'], ['مجموعة عملاء', 'admin.sales.groups.create'], ['فريق مبيعات', 'admin.sales.sales-teams.create']],
             default => [],
         };
-        $candidates = array_merge($candidates, [['مكالمة', $scope->route('activities.create')], ['اجتماع', $scope->route('activities.create'), ['kind' => 'meeting']], ['مهمة', $scope->route('activities.create'), ['kind' => 'task']]]);
+        if ($scope->can('activities.access') && $scope->can('activities.create')) {
+            $candidates = array_merge($candidates, [['مكالمة', $scope->route('activities.create')], ['اجتماع', $scope->route('activities.create'), ['kind' => 'meeting']], ['مهمة', $scope->route('activities.create'), ['kind' => 'task']]]);
+        }
 
         return array_values(array_map(
             fn ($c) => ['label' => $c[0], 'url' => route($c[1], $c[2] ?? [])],

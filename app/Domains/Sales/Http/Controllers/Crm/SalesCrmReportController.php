@@ -33,7 +33,7 @@ class SalesCrmReportController extends Controller
         $scope = $this->scope($request);
 
         return $this->view($scope, 'reports', 'reports.index', [
-            'reports' => CrmReports::REPORTS,
+            'reports' => $this->allowedReports($scope),
             'legacy' => $this->legacyLinks($scope),
         ]);
     }
@@ -42,6 +42,7 @@ class SalesCrmReportController extends Controller
     {
         abort_unless(array_key_exists($report, CrmReports::REPORTS), 404);
         $scope = $this->scope($request);
+        abort_unless($scope->can('reports.'.$report), 403, 'التقرير ده مقفول لدورك من إعدادات CRM.');
         [$range, $from, $to] = $this->range($request);
         $userId = $scope->isRep() ? null : ($request->integer('user') ?: null);
         if ($userId && ! $scope->members()->contains('id', $userId)) {
@@ -51,13 +52,15 @@ class SalesCrmReportController extends Controller
         $data = (new CrmReports($scope, $from, $to, $userId))->build($report);
 
         if ($request->query('export') === 'csv') {
+            abort_unless($scope->can('reports.export'), 403);
+
             return $this->csv($report, $data, $from, $to);
         }
 
         return $this->view($scope, 'reports', 'reports.show', [
             'key' => $report,
             'meta' => CrmReports::REPORTS[$report],
-            'reports' => CrmReports::REPORTS,
+            'reports' => $this->allowedReports($scope),
             'data' => $data,
             'range' => $range,
             'from' => $from,
@@ -65,6 +68,12 @@ class SalesCrmReportController extends Controller
             'userId' => $userId,
             'members' => $scope->isRep() ? collect() : $scope->members(),
         ]);
+    }
+
+    /** التقارير المسموحة للدور (CrmPermissions: reports.{key}). */
+    private function allowedReports(CrmScope $scope): array
+    {
+        return array_filter(CrmReports::REPORTS, fn ($key) => $scope->can('reports.'.$key), ARRAY_FILTER_USE_KEY);
     }
 
     /** @return array{0: string, 1: Carbon, 2: Carbon} */

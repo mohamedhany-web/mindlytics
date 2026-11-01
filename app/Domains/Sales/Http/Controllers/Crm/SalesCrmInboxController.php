@@ -43,7 +43,7 @@ class SalesCrmInboxController extends Controller
             'q' => trim((string) $request->query('q', '')),
             'assigned_to' => $scope->isRep() ? null : ($request->integer('assigned_to') ?: null),
         ];
-        if ($f['quick'] === 'unassigned' && $scope->isRep()) {
+        if ($f['quick'] === 'unassigned' && ! $this->canSeeUnassigned($scope)) {
             $f['quick'] = 'all';
         }
 
@@ -62,7 +62,7 @@ class SalesCrmInboxController extends Controller
 
         $counts = [];
         foreach (array_keys(self::QUICK) as $k) {
-            if ($k === 'unassigned' && $scope->isRep()) {
+            if ($k === 'unassigned' && ! $this->canSeeUnassigned($scope)) {
                 continue;
             }
             $w = $this->whatsapp($scope, ['quick' => $k] + $f);
@@ -77,6 +77,11 @@ class SalesCrmInboxController extends Controller
             'members' => $scope->isRep() ? collect() : $scope->members(),
             'classic' => $this->classicLinks($scope),
         ]);
+    }
+
+    private function canSeeUnassigned(CrmScope $scope): bool
+    {
+        return ! $scope->isRep() && $scope->can('inbox.unassigned');
     }
 
     private function whatsapp(CrmScope $scope, array $f): ?Builder

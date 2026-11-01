@@ -158,10 +158,12 @@ class SalesCrmController extends Controller
         }
 
         if ($data['action'] === 'export') {
+            abort_unless($scope->can('leads.export'), 403);
+
             return $this->exportCsv($leads);
         }
 
-        abort_unless($scope->canManage(), 403);
+        abort_unless($scope->canTransfer(), 403);
         $toUserId = (int) ($data['to_user_id'] ?? 0);
         if (! $scope->members()->contains('id', $toUserId)) {
             throw ValidationException::withMessages(['to_user_id' => 'اختر موظف مبيعات من نطاقك.']);
@@ -242,7 +244,7 @@ class SalesCrmController extends Controller
     public function convertForm(Request $request, int $lead): View
     {
         $scope = $this->scope($request);
-        abort_unless($scope->canManage(), 403);
+        abort_unless($scope->canConvert(), 403);
         $lead = $this->findLead($scope, $lead);
 
         $students = $this->matchingStudents($lead);
@@ -263,7 +265,7 @@ class SalesCrmController extends Controller
     public function convert(Request $request, int $lead): RedirectResponse
     {
         $scope = $this->scope($request);
-        abort_unless($scope->canManage() && SalesLeadOrderLinker::ready(), 403);
+        abort_unless($scope->canConvert() && SalesLeadOrderLinker::ready(), 403);
         $lead = $this->findLead($scope, $lead);
         $data = $request->validate(['order_id' => ['required', 'integer', 'exists:orders,id']], ['order_id.required' => 'اختر الطلب المدفوع.']);
 
@@ -418,7 +420,7 @@ class SalesCrmController extends Controller
             'order' => $order,
             'netPaid' => $order ? $this->linker->netPaid($order) : null,
             'daysInStage' => $lead->stage_entered_at ? (int) $lead->stage_entered_at->diffInDays(now()) : null,
-            'members' => $scope->canManage() ? $scope->members() : collect(),
+            'members' => $scope->canTransfer() ? $scope->members() : collect(),
             'planned' => $scope->activities()->where('sales_lead_id', $lead->id)->with('assignee:id,name')
                 ->orderByRaw("status = 'planned' desc")->orderBy('starts_at')->limit(15)->get(),
         ];

@@ -24,7 +24,7 @@
         <h1 style="margin: 0; font-size: 26px; font-weight: 400">{{ $lead->linkedCourseTitle() ? $lead->linkedCourseTitle().' — ' : '' }}{{ $lead->name }}</h1>
         <span style="flex: 1"></span>
         <a href="{{ route($crm->route('leads.show'), $lead->id) }}" class="crm-btn crm-btn-muted">ملف العميل</a>
-        @if(! $order && $crm->canManage())<a href="{{ route($crm->route('leads.convert'), $lead->id) }}" class="crm-btn crm-btn-slate">ربط بطلب</a>@endif
+        @if(! $order && $crm->canConvert())<a href="{{ route($crm->route('leads.convert'), $lead->id) }}" class="crm-btn crm-btn-slate">ربط بطلب</a>@endif
         @if($approveUrl)<a href="{{ $approveUrl }}" class="crm-btn crm-btn-primary">اعتماد وصرف العمولة</a>@endif
     </div>
 

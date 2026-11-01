@@ -27,7 +27,7 @@
         <select id="report-switch" class="crm-select" onchange="location.href = this.value">
             @foreach($reports as $k => $r)<option value="{{ route($showRoute, $params(['report' => $k])) }}" @selected($k === $key)>{{ $r['label'] }}</option>@endforeach
         </select>
-        <a href="{{ route($showRoute, $params(['export' => 'csv'])) }}" class="crm-btn crm-btn-slate"><i class="fas fa-download"></i> تصدير CSV</a>
+        @if($crm->can('reports.export'))<a href="{{ route($showRoute, $params(['export' => 'csv'])) }}" class="crm-btn crm-btn-slate"><i class="fas fa-download"></i> تصدير CSV</a>@endif
     </div>
 
     <form method="get" action="{{ route($showRoute, $key) }}" class="crm-card" x-data="{ range: '{{ $range }}' }" style="padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 10px; align-items: end">

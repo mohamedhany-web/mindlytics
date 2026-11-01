@@ -27,7 +27,7 @@ class SalesCrmCalendarController extends Controller
     {
         $scope = $this->scope($request);
         $mode = array_key_exists((string) $request->query('view'), self::VIEWS) ? (string) $request->query('view') : 'week';
-        if ($mode === 'shared' && $scope->isRep()) {
+        if ($mode === 'shared' && ($scope->isRep() || ! $scope->can('calendar.shared'))) {
             $mode = 'week';
         }
         $date = rescue(fn () => Carbon::parse((string) $request->query('date', today()->toDateString()))->startOfDay(), today(), false);

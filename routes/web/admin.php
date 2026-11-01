@@ -42,6 +42,7 @@ use Illuminate\Support\Facades\Route;
         // نفس CRM المبيعات بنطاق كل البيانات (docs/SALES_CRM.md)
         Route::prefix('crm')->name('crm.')->group(function () {
             require app_path('Domains/Sales/routes/crm.php');
+            require app_path('Domains/Sales/routes/admin/crm-settings.php');
         });
 
         // HR (Recruitment / ATS)

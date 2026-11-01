@@ -61,6 +61,7 @@ class SalesCrmActivityController extends Controller
     public function create(Request $request): View
     {
         $scope = $this->scope($request);
+        abort_unless($scope->can('activities.create'), 403);
         $lead = $request->integer('lead') ? $scope->leads()->find($request->integer('lead')) : null;
         $student = $request->integer('student') ? $scope->students()->find($request->integer('student')) : null;
         $kind = array_key_exists((string) $request->query('kind'), SalesPlannedActivity::KINDS) ? (string) $request->query('kind') : 'call';
@@ -87,6 +88,7 @@ class SalesCrmActivityController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $scope = $this->scope($request);
+        abort_unless($scope->can('activities.create'), 403);
         $data = $this->validated($request, true);
         $activity = $this->service->schedule($scope, $data);
 

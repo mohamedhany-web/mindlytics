@@ -711,6 +711,9 @@ GET|HEAD admin/crm/calendar [admin.crm.calendar] {web,auth,prevent-concurrent,ro
 GET|HEAD admin/crm/inbox [admin.crm.inbox] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/crm/reports [admin.crm.reports.index] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/crm/reports/{report} [admin.crm.reports.show] {web,auth,prevent-concurrent,role:admin|super_admin}
+GET|HEAD admin/crm/settings [admin.crm.settings.index] {web,auth,prevent-concurrent,role:admin|super_admin}
+PUT admin/crm/settings/roles [admin.crm.settings.roles.update] {web,auth,prevent-concurrent,role:admin|super_admin}
+PUT admin/crm/settings/users/{user} [admin.crm.settings.users.update] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/hr/jobs [admin.hr.jobs.index] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/hr/jobs/create [admin.hr.jobs.create] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/hr/jobs [admin.hr.jobs.store] {web,auth,prevent-concurrent,role:admin|super_admin}

@@ -14,9 +14,9 @@
     <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px">
         <h1 class="crm-title">الأنشطة</h1>
         <div style="display: flex; flex-wrap: wrap; gap: 6px">
-            @foreach(SalesPlannedActivity::KINDS as $k => $v)
+            @if($crm->can('activities.create'))@foreach(SalesPlannedActivity::KINDS as $k => $v)
                 <a href="{{ route($crm->route('activities.create'), ['kind' => $k]) }}" class="crm-btn crm-btn-primary"><i class="fas {{ SalesPlannedActivity::KIND_ICONS[$k] }}"></i> جدولة {{ $v }}</a>
-            @endforeach
+            @endforeach @endif
             <a href="{{ route($crm->route('calendar')) }}" class="crm-btn crm-btn-dark"><i class="fas fa-calendar"></i> الكاليندر</a>
             <button type="button" class="crm-btn crm-btn-slate" @click="filter = ! filter" :aria-expanded="filter">فلتر</button>
         </div>

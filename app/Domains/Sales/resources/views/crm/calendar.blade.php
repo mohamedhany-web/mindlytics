@@ -38,7 +38,7 @@
     <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px">
         <h1 class="crm-title">الكاليندر</h1>
         <div style="display: flex; flex-wrap: wrap; gap: 6px">
-            <a href="{{ route($crm->route('activities.create'), ['kind' => 'call', 'redirect_to' => url()->full()]) }}" class="crm-btn crm-btn-primary">＋ جدولة نشاط</a>
+            @if($crm->can('activities.create'))<a href="{{ route($crm->route('activities.create'), ['kind' => 'call', 'redirect_to' => url()->full()]) }}" class="crm-btn crm-btn-primary">＋ جدولة نشاط</a>@endif
             <a href="{{ route($crm->route('activities.index')) }}" class="crm-btn crm-btn-dark">قائمة الأنشطة</a>
         </div>
     </div>
@@ -62,7 +62,7 @@
             @endif
             <nav aria-label="طريقة العرض" style="display: flex; gap: 2px">
                 @foreach(SalesCrmCalendarController::VIEWS as $k => $v)
-                    @continue($k === 'shared' && $crm->isRep())
+                    @continue($k === 'shared' && ($crm->isRep() || ! $crm->can('calendar.shared')))
                     <a href="{{ $link(['view' => $k]) }}" class="crm-btn crm-btn-sm {{ $mode === $k ? 'crm-btn-dark' : 'crm-btn-outline' }}" @if($mode === $k) aria-current="page" @endif>{{ $v }}</a>
                 @endforeach
             </nav>
@@ -86,7 +86,7 @@
                     <div class="cal-cell {{ $mode === 'month' && ! $day->isSameMonth($date) ? 'is-out' : '' }} {{ $day->isToday() ? 'is-today' : '' }}" @if($mode === 'week') style="min-height: 260px" @endif>
                         <div class="cal-daynum">
                             <a href="{{ $link(['view' => 'day', 'date' => $day->toDateString()]) }}" style="color: inherit; text-decoration: none">{{ $day->format('j') }}<span class="crm-hide-sm" style="font-weight: 400"> {{ $mode === 'week' ? $day->translatedFormat('M') : '' }}</span></a>
-                            <a class="cal-add" href="{{ $createUrl($day) }}" aria-label="جدولة يوم {{ $day->format('d/m') }}">＋</a>
+                            @if($crm->can('activities.create'))<a class="cal-add" href="{{ $createUrl($day) }}" aria-label="جدولة يوم {{ $day->format('d/m') }}">＋</a>@endif
                         </div>
                         @foreach($list->take($mode === 'month' ? 4 : 30) as $e)
                             <a href="{{ $e['url'] }}" class="cal-ev {{ in_array($e['status'], ['done', 'missed'], true) ? 'is-done' : '' }} {{ $e['late'] ? 'is-late' : '' }}" style="border-color: {{ $colors[$e['kind']] ?? '#534D64' }}" title="{{ $e['label'] }} — {{ $e['title'] }}{{ $e['user'] && ! $crm->isRep() ? ' · '.$e['user'] : '' }}">
@@ -113,7 +113,7 @@
                                 <td class="{{ $e['late'] ? 'crm-bad' : '' }}">{{ $e['kind'] === 'follow_up' ? ($e['late'] ? 'متأخرة' : 'مستحقة') : \App\Domains\Sales\Models\SalesPlannedActivity::statusLabel($e['status']) }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="crm-muted" style="text-align: center; padding: 22px">مفيش حاجة في اليوم ده. <a class="crm-link" href="{{ $createUrl($date) }}">جدول نشاط</a></td></tr>
+                            <tr><td colspan="5" class="crm-muted" style="text-align: center; padding: 22px">مفيش حاجة في اليوم ده.@if($crm->can('activities.create')) <a class="crm-link" href="{{ $createUrl($date) }}">جدول نشاط</a>@endif</td></tr>
                         @endforelse
                     </tbody>
                 </table>

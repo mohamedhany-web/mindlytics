@@ -22,7 +22,7 @@
         @if($student->phone && ($wa = \App\Domains\Sales\Support\PhoneKey::whatsappUrl($student->phone)))
             <a href="{{ $wa }}" target="_blank" rel="noopener" class="crm-btn crm-btn-outline"><i class="fab fa-whatsapp"></i> واتساب</a>
         @endif
-        <a href="{{ route($crm->route('activities.create'), array_filter(['kind' => 'call', 'student' => $firstLead ? null : $student->id, 'lead' => $firstLead?->id, 'redirect_to' => url()->current()])) }}" class="crm-btn crm-btn-primary">＋ جدولة مكالمة</a>
+        @if($crm->can('activities.create'))<a href="{{ route($crm->route('activities.create'), array_filter(['kind' => 'call', 'student' => $firstLead ? null : $student->id, 'lead' => $firstLead?->id, 'redirect_to' => url()->current()])) }}" class="crm-btn crm-btn-primary">＋ جدولة مكالمة</a>@endif
         @if($adminUrl)<a href="{{ $adminUrl }}" class="crm-btn crm-btn-slate">الملف في الإدارة</a>@endif
     </div>
 
@@ -105,9 +105,9 @@
 
                 <div class="crm-subpanel" x-show="rel.planned">
                     <div class="crm-subpanel-head"><h3>الأنشطة</h3><span style="flex: 1"></span>
-                        @foreach(SalesPlannedActivity::KINDS as $k => $v)
+                        @if($crm->can('activities.create'))@foreach(SalesPlannedActivity::KINDS as $k => $v)
                             <a class="crm-btn crm-btn-outline crm-btn-sm" href="{{ route($crm->route('activities.create'), array_filter(['kind' => $k, 'student' => $firstLead ? null : $student->id, 'lead' => $firstLead?->id, 'redirect_to' => url()->current()])) }}">＋ {{ $v }}</a>
-                        @endforeach
+                        @endforeach @endif
                     </div>
                     @include('sales::crm.partials.planned-table', ['items' => $planned])
                 </div>

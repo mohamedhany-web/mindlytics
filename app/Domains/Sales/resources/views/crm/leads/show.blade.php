@@ -34,8 +34,10 @@
         <div style="position: relative" @click.outside="actions = false">
             <button type="button" class="crm-btn crm-btn-slate" @click="actions = ! actions" :aria-expanded="actions">إجراءات <i class="fas fa-caret-down"></i></button>
             <div x-cloak x-show="actions" role="menu" style="position: absolute; left: 0; top: 34px; width: 220px; background: #627587; box-shadow: 0 4px 10px rgba(0,0,0,.3); padding: 4px 0; z-index: 40">
-                @if($crm->canManage())
+                @if($crm->canConvert())
                     <a role="menuitem" href="{{ route($crm->route('leads.convert'), $lead->id) }}" style="display: block; padding: 8px 14px; color: #fff; font-size: 13px; font-weight: 700">تحويل لطالب (ربط بطلب)</a>
+                @endif
+                @if($crm->canTransfer())
                     @if($transferAction)<button type="button" role="menuitem" @click="transfer = true; actions = false" style="display: block; width: 100%; text-align: start; padding: 8px 14px; color: #fff; font-size: 13px; background: transparent; border: 0; cursor: pointer">تحويل لموظف آخر</button>@endif
                 @endif
                 @if($canRepAct && $classicUrl)<a role="menuitem" href="{{ $classicUrl }}#pipeline" style="display: block; padding: 8px 14px; color: #fff; font-size: 13px">تحريك المرحلة (Pipeline)</a>@endif
@@ -158,9 +160,9 @@
 
                 <div class="crm-subpanel" x-show="rel.activities">
                     <div class="crm-subpanel-head"><h3>الأنشطة</h3><span style="flex: 1"></span>
-                        @foreach(\App\Domains\Sales\Models\SalesPlannedActivity::KINDS as $k => $v)
+                        @if($crm->can('activities.create'))@foreach(\App\Domains\Sales\Models\SalesPlannedActivity::KINDS as $k => $v)
                             <a class="crm-btn crm-btn-outline crm-btn-sm" href="{{ route($crm->route('activities.create'), ['kind' => $k, 'lead' => $lead->id, 'redirect_to' => url()->current()]) }}">＋ {{ $v }}</a>
-                        @endforeach
+                        @endforeach @endif
                     </div>
                     @if($lead->next_follow_up_at && ! $planned->contains(fn ($a) => $a->isPlanned() && $a->starts_at->format('Y-m-d H:i') === $lead->next_follow_up_at->format('Y-m-d H:i')))
                         <p style="margin: 0; padding: 8px 10px; font-size: 13px; border-bottom: 1px solid #E5E7EB">المتابعة التالية: <span class="{{ $isLate ? 'crm-bad' : '' }}">{{ $lead->next_follow_up_at->format('d/m/Y H:i') }}</span> · {{ $label(SalesLead::FOLLOW_UP_CHANNELS, $lead->follow_up_channel) }}{{ $isLate ? ' (متأخر)' : '' }}</p>
@@ -199,7 +201,7 @@
                 </div>
 
                 <div class="crm-subpanel" x-cloak x-show="rel.order">
-                    <div class="crm-subpanel-head"><h3>الطلبات والمدفوعات</h3>@if(! $order && $crm->canManage())<a class="crm-btn crm-btn-primary crm-btn-sm" href="{{ route($crm->route('leads.convert'), $lead->id) }}">ربط بطلب</a>@endif</div>
+                    <div class="crm-subpanel-head"><h3>الطلبات والمدفوعات</h3>@if(! $order && $crm->canConvert())<a class="crm-btn crm-btn-primary crm-btn-sm" href="{{ route($crm->route('leads.convert'), $lead->id) }}">ربط بطلب</a>@endif</div>
                     <table class="crm-table crm-table-plain">
                         <thead><tr><th>الطلب</th><th>الكورس</th><th>المبلغ</th><th>المدفوع فعلاً</th><th>الحالة</th></tr></thead>
                         <tbody>

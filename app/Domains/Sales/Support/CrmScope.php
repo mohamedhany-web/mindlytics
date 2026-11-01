@@ -65,6 +65,12 @@ final class CrmScope
         return $this->role === self::ROLE_ADMIN;
     }
 
+    /** صلاحية وحدة أو إجراء (`leads.export`…) حسب إعدادات الإدارة (CrmPermissions). الأدمن دايماً مسموح. */
+    public function can(string $key): bool
+    {
+        return CrmPermissions::allows($this->user, $this->role, $key);
+    }
+
     /** عملاء ضمن النطاق. */
     public function leads(): Builder
     {
@@ -91,6 +97,18 @@ final class CrmScope
     public function canManage(): bool
     {
         return ! $this->isRep();
+    }
+
+    /** تحويل عملاء لموظف تاني (حسب صلاحيات الإدارة). */
+    public function canTransfer(): bool
+    {
+        return $this->canManage() && $this->can('leads.transfer');
+    }
+
+    /** تحويل عميل لطالب بربطه بطلب (حسب صلاحيات الإدارة). */
+    public function canConvert(): bool
+    {
+        return $this->canManage() && $this->can('leads.convert');
     }
 
     /** موظفو المبيعات الذين يظهرون في الفلاتر وقوائم التحويل. */
@@ -159,7 +177,7 @@ final class CrmScope
     public function canEditActivity(SalesPlannedActivity $activity): bool
     {
         return $activity->isPlanned() && $this->canSeeActivity($activity) && (
-            $this->canManage()
+            ($this->canManage() && $this->can('activities.edit_others'))
             || (int) $activity->assigned_to === (int) $this->user->id
             || (int) $activity->created_by === (int) $this->user->id
         );
@@ -172,7 +190,7 @@ final class CrmScope
      */
     public function assignableUsers(): Collection
     {
-        if ($this->isRep()) {
+        if ($this->isRep() || ! $this->can('activities.assign_others')) {
             return collect([$this->user]);
         }
 
