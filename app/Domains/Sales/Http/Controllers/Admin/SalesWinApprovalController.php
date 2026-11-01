@@ -2,6 +2,7 @@
 
 namespace App\Domains\Sales\Http\Controllers\Admin;
 
+use App\Domains\Sales\Http\Controllers\Crm\InteractsWithCrm;
 use App\Http\Controllers\Controller;
 use App\Domains\Sales\Models\SalesLead;
 use App\Models\User;
@@ -11,6 +12,8 @@ use Illuminate\Http\Request;
 
 class SalesWinApprovalController extends Controller
 {
+    use InteractsWithCrm;
+
     public function __construct(
         private SalesWinCommissionService $winCommission,
     ) {}
@@ -47,7 +50,8 @@ class SalesWinApprovalController extends Controller
                 ->sum(fn (SalesLead $l) => SalesWinCommissionService::defaultCommissionForLead($l)),
         ];
 
-        return view('sales::admin.win-approvals.index', compact('leads', 'reps', 'stats'));
+        // بإطار CRM (تاب الصفقات)، زي باقي شاشات المبيعات الجديدة
+        return $this->view($this->scope($request), 'deals', 'win-approvals', compact('leads', 'reps', 'stats'));
     }
 
     public function approve(Request $request, SalesLead $lead): RedirectResponse
