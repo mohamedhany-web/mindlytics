@@ -3,6 +3,8 @@
 use App\Domains\Sales\Http\Controllers\Crm\SalesCrmActivityController;
 use App\Domains\Sales\Http\Controllers\Crm\SalesCrmCalendarController;
 use App\Domains\Sales\Http\Controllers\Crm\SalesCrmController;
+use App\Domains\Sales\Http\Controllers\Crm\SalesCrmInboxController;
+use App\Domains\Sales\Http\Controllers\Crm\SalesCrmReportController;
 use App\Domains\Sales\Http\Controllers\Crm\SalesCrmStudentController;
 use Illuminate\Support\Facades\Route;
 
@@ -33,3 +35,8 @@ Route::post('activities/{activity}/complete', [SalesCrmActivityController::class
 Route::post('activities/{activity}/cancel', [SalesCrmActivityController::class, 'cancel'])->whereNumber('activity')->name('activities.cancel');
 
 Route::get('calendar', [SalesCrmCalendarController::class, 'index'])->name('calendar');
+
+Route::get('inbox', [SalesCrmInboxController::class, 'index'])->name('inbox');
+
+Route::get('reports', [SalesCrmReportController::class, 'index'])->name('reports.index');
+Route::get('reports/{report}', [SalesCrmReportController::class, 'show'])->where('report', '[a-z_]+')->name('reports.show');

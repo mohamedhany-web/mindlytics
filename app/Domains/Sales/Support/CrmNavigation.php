@@ -56,11 +56,12 @@ final class CrmNavigation
                 ],
             ],
             [
-                'key' => 'inbox', 'label' => 'المحادثات', 'route' => $scope->isRep() ? 'employee.sales.whatsapp.inbox.index' : ($scope->isManager() ? 'employee.sales-manager.whatsapp.inbox.index' : 'admin.whatsapp.inbox'),
+                'key' => 'inbox', 'label' => 'المحادثات', 'route' => $scope->route('inbox'),
                 'items' => array_merge(
+                    [['كل المحادثات', $scope->route('inbox')], ['غير المقروءة', $scope->route('inbox'), ['quick' => 'unread']]],
                     $scope->isRep() ? [['واتساب', 'employee.sales.whatsapp.inbox.index'], ['Messenger و Instagram', 'employee.sales.meta-social.inbox.index']] : [],
                     $scope->isManager() ? [['واتساب الفريق', 'employee.sales-manager.whatsapp.inbox.index'], ['طلبات جديدة بدون موظف', 'employee.sales-manager.whatsapp.queue.index'], ['Messenger و Instagram', 'employee.sales.meta-social.inbox.index']] : [],
-                    $scope->isAdmin() ? [['صندوق الوارد', 'admin.whatsapp.inbox']] : [],
+                    $scope->isAdmin() ? [['صندوق واتساب', 'admin.whatsapp.inbox'], ['Messenger و Instagram', 'admin.meta-social.inbox.index']] : [],
                 ),
             ],
             [
@@ -74,8 +75,9 @@ final class CrmNavigation
                 ),
             ],
             [
-                'key' => 'reports', 'label' => 'التقارير', 'route' => $scope->isRep() ? 'employee.sales.kpi.index' : ($scope->isManager() ? 'employee.sales-manager.scorecard.index' : 'admin.sales.reports.index'),
+                'key' => 'reports', 'label' => 'التقارير', 'route' => $scope->route('reports.index'),
                 'items' => array_merge(
+                    [['كل التقارير', $scope->route('reports.index')], ['أداء الموظفين', $scope->route('reports.show'), ['report' => 'performance']], ['النشاط اليومي', $scope->route('reports.show'), ['report' => 'daily']], ['الصفقات والإيراد', $scope->route('reports.show'), ['report' => 'deals']]],
                     $scope->isRep() ? [['KPIs والأداء', 'employee.sales.kpi.index'], ['التقرير اليومي', 'employee.sales.daily-reports.index'], ['تقارير الأداء', 'employee.sales.reports.index'], ['خصومات KPI', 'employee.sales.penalties.index']] : [],
                     $scope->isManager() ? [['مركز الرقابة اليومية', 'employee.sales-manager.scorecard.index'], ['KPIs والأهداف', 'employee.sales-manager.kpi.index'], ['اللوحة الحية', 'employee.sales-manager.live-board'], ['التقارير اليومية', 'employee.sales-manager.daily-reports.index'], ['تقرير الفريق للإدارة', 'employee.sales-manager.team-reports.index'], ['تقارير الكامبين', 'employee.sales-manager.campaign-reports.index']] : [],
                     $scope->isAdmin() ? [['تقارير المبيعات', 'admin.sales.reports.index'], ['مراقبة KPIs', 'admin.sales.kpi.index'], ['التقارير اليومية', 'admin.sales.daily-reports.index'], ['تقارير الفرق', 'admin.sales.team-daily-reports.index'], ['Insights الموظفين', 'admin.sales.insights.index'], ['تدقيق استخدام CRM', 'admin.sales.crm-compliance.index']] : [],

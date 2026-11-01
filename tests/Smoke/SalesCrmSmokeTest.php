@@ -6,6 +6,9 @@ use App\Domains\Accounting\Models\Order;
 use App\Domains\Accounting\Models\Wallet;
 use App\Domains\Hr\Models\EmployeeJob;
 use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Messaging\Models\MetaSocialConversation;
+use App\Domains\Messaging\Models\MetaSocialPage;
+use App\Domains\Messaging\Models\WhatsAppConversation;
 use App\Domains\Sales\Models\SalesActivity;
 use App\Domains\Sales\Models\SalesLead;
 use App\Domains\Sales\Models\SalesPlannedActivity;
@@ -278,6 +281,94 @@ class SalesCrmSmokeTest extends SmokeTestCase
         $this->assertSame('cancelled', $task->fresh()->status);
     }
 
+    public function test_reports_are_scoped_correct_and_exportable(): void
+    {
+        // النسخة فيها نشاط حقيقي النهارده، فبنقارن قبل وبعد: مكالمتين (واحدة اترد عليها)، اجتماع، وصفقة فازت؛ ونشاط للموظف اللي برة الفريق
+        $base = $this->actingAs($this->rep)->reportRow('/employee/crm/reports/performance?range=today', $this->rep->name)
+            ?? ['calls' => 0, 'answered' => 0, 'meetings' => 0, 'won' => 0, 'won_value' => 0];
+        $won = $this->lead($this->rep, 'Smoke CRM Report Won', ['stage' => SalesLead::WON_STAGE, 'expected_value' => 1500, 'closed_at' => now(), 'source' => 'referral']);
+        foreach ([['call', 'interested'], ['call', 'no_answer'], ['meeting', null]] as [$type, $outcome]) {
+            SalesActivity::create(['sales_lead_id' => $won->id, 'user_id' => $this->rep->id, 'type' => $type, 'outcome' => $outcome, 'title' => 'smoke']);
+        }
+        SalesActivity::create(['sales_lead_id' => $this->outsiderLead->id, 'user_id' => $this->outsider->id, 'type' => 'call', 'outcome' => 'interested', 'title' => 'smoke']);
+        $lost = $this->lead($this->rep, 'Smoke CRM Report Lost', ['stage' => 'lost', 'lost_reason' => 'price', 'closed_at' => now()]);
+
+        $this->actingAs($this->rep);
+        $this->page('/employee/crm/reports')->assertSee('أداء الموظفين')->assertSee('KPIs والأداء');
+        foreach (array_keys(\App\Domains\Sales\Support\CrmReports::REPORTS) as $key) {
+            foreach (['today', 'week', 'month', 'last_month', '30d'] as $range) {
+                $this->page('/employee/crm/reports/'.$key.'?range='.$range);
+            }
+        }
+        $this->page('/employee/crm/reports/performance?range=custom&from='.now()->subDays(3)->toDateString().'&to='.now()->toDateString());
+        $this->get('/employee/crm/reports/nope')->assertNotFound();
+
+        $row = $this->reportRow('/employee/crm/reports/performance?range=today', $this->rep->name);
+        $this->assertSame($base['calls'] + 2, $row['calls']);
+        $this->assertSame($base['answered'] + 1, $row['answered']);
+        $this->assertSame($base['meetings'] + 1, $row['meetings']);
+        $this->assertSame($base['won'] + 1, $row['won']);
+        $this->assertEqualsWithDelta((float) $base['won_value'] + 1500, (float) $row['won_value'], 0.01);
+        $this->assertNull($this->reportRow('/employee/crm/reports/performance?range=today', $this->outsider->name), 'a rep only sees their own row');
+        $this->assertNotNull($this->reportRow('/employee/crm/reports/lost?range=today', 'السعر'));
+        $this->assertNotNull($this->reportRow('/employee/crm/reports/sources?range=today', 'إحالة'));
+        $this->assertNotNull($this->reportRow('/employee/crm/reports/deals?range=today', $this->rep->name));
+        // الموظف ما يقدرش يفلتر بموظف تاني
+        $this->assertNull($this->reportRow('/employee/crm/reports/performance?range=today&user='.$this->outsider->id, $this->outsider->name));
+
+        $this->actingAs($this->manager);
+        $this->assertNotNull($this->reportRow('/employee/crm/reports/performance?range=today', $this->rep->name));
+        $this->assertNull($this->reportRow('/employee/crm/reports/performance?range=today', $this->outsider->name), 'the outsider is not in the team');
+        $this->assertNull($this->reportRow('/employee/crm/reports/performance?range=today&user='.$this->outsider->id, $this->outsider->name));
+
+        $this->actingAs($this->admin);
+        foreach (array_keys(\App\Domains\Sales\Support\CrmReports::REPORTS) as $key) {
+            $this->page('/admin/crm/reports/'.$key.'?range=month');
+        }
+        $this->assertSame(1, $this->reportRow('/admin/crm/reports/performance?range=today&user='.$this->outsider->id, $this->outsider->name)['calls'], 'the new outsider rep has exactly the one call');
+        $csv = $this->get('/admin/crm/reports/performance?range=today&export=csv');
+        $csv->assertOk();
+        $this->assertStringContainsString($this->outsider->name, $csv->streamedContent());
+        $this->assertNotNull($lost->id);
+    }
+
+    public function test_unified_inbox_is_scoped_per_role(): void
+    {
+        $wa = fn (string $name, ?User $assignee, ?SalesLead $lead, int $unread = 0) => WhatsAppConversation::forceCreate([
+            'phone_number' => '2010'.random_int(10000000, 99999999), 'contact_name' => $name, 'assigned_to' => $assignee?->id, 'sales_lead_id' => $lead?->id,
+            'status' => WhatsAppConversation::STATUS_OPEN, 'last_message_at' => now(), 'last_message_preview' => 'hello '.$name, 'last_message_direction' => 'inbound', 'unread_count' => $unread,
+        ]);
+        $wa('Smoke WA Mine', null, $this->repLead, 2);
+        $wa('Smoke WA Assigned', $this->rep, null);
+        $wa('Smoke WA Outsider', $this->outsider, $this->outsiderLead);
+        $wa('Smoke WA Queue', null, null);
+        $page = MetaSocialPage::forceCreate(['page_id' => 'smoke-'.Str::random(8), 'page_name' => 'Smoke Page', 'is_active' => true]);
+        MetaSocialConversation::forceCreate(['meta_social_page_id' => $page->id, 'platform' => 'instagram', 'participant_id' => 'smoke-'.Str::random(8),
+            'participant_name' => 'Smoke IG Mine', 'assigned_to' => $this->rep->id, 'status' => 'open', 'last_message_at' => now()->subMinute(), 'last_message_preview' => 'ig hi', 'unread_count' => 1]);
+
+        $this->actingAs($this->rep);
+        $inbox = $this->page('/employee/crm/inbox?q=Smoke');
+        $inbox->assertSee('Smoke WA Mine')->assertSee('Smoke WA Assigned')->assertSee('Smoke IG Mine')->assertSee('Smoke CRM Rep Lead')
+            ->assertDontSee('Smoke WA Outsider')->assertDontSee('Smoke WA Queue');
+        $this->page('/employee/crm/inbox?q=Smoke&quick=unread')->assertSee('Smoke WA Mine')->assertDontSee('Smoke WA Assigned');
+        $this->page('/employee/crm/inbox?q=Smoke&channel=instagram')->assertSee('Smoke IG Mine')->assertDontSee('Smoke WA Mine');
+        $this->page('/employee/crm/inbox?q=Smoke&quick=unassigned')->assertDontSee('Smoke WA Queue');
+        foreach (['all', 'unread', 'open', 'no_lead'] as $quick) {
+            $this->page('/employee/crm/inbox?quick='.$quick);
+        }
+        preg_match('/href="([^"]+whatsapp\/inbox\/\d+)"/', $inbox->getContent(), $m);
+        $this->assertNotEmpty($m, 'each WhatsApp row opens the existing thread');
+        $this->assertNotContains($this->get(parse_url(html_entity_decode($m[1]), PHP_URL_PATH))->getStatusCode(), [403, 404, 500]);
+
+        $this->actingAs($this->manager);
+        $this->page('/employee/crm/inbox?q=Smoke')->assertSee('Smoke WA Mine')->assertDontSee('Smoke WA Outsider');
+        $this->page('/employee/crm/inbox?q=Smoke&quick=unassigned')->assertSee('Smoke WA Queue')->assertDontSee('Smoke WA Assigned');
+
+        $this->actingAs($this->admin);
+        $this->page('/admin/crm/inbox?q=Smoke')->assertSee('Smoke WA Outsider')->assertSee('Smoke WA Queue')->assertSee('Smoke IG Mine');
+        $this->page('/admin/crm/inbox?q=Smoke&assigned_to='.$this->outsider->id)->assertSee('Smoke WA Outsider')->assertDontSee('Smoke WA Mine');
+    }
+
     /** يفتح كل روابط الشريط العلوي (قوائم الوحدات و«+») للدور الحالي: ممنوع 403 أو 404 أو 500. */
     private function assertNavLinksWork(TestResponse $page): void
     {
@@ -299,6 +390,27 @@ class SalesCrmSmokeTest extends SmokeTestCase
             }
         }
         $this->assertSame([], $bad, "Broken CRM menu links:\n".implode("\n", $bad));
+    }
+
+    /** صف من جدول التقرير أول خانة فيه = $first (أو null). صفوف «أداء الموظفين» بترجع بأسماء الأعمدة. */
+    private function reportRow(string $url, string $first): ?array
+    {
+        $html = $this->page($url)->getContent();
+        preg_match('/<tbody>(.*?)<\/tbody>/s', $html, $body);
+        preg_match_all('/<tr>(.*?)<\/tr>/s', $body[1] ?? '', $rows);
+        foreach ($rows[1] as $tr) {
+            preg_match_all('/<td[^>]*>(.*?)<\/td>/s', $tr, $cells);
+            $cells = array_map(fn ($c) => trim(html_entity_decode(strip_tags($c))), $cells[1]);
+            if (($cells[0] ?? null) !== $first) {
+                continue;
+            }
+            $keys = ['name', 'new', 'worked', 'calls', 'answered', 'answer_rate', 'qualified', 'meetings', 'won', 'won_value', 'conversion'];
+            $values = array_map(fn ($v) => is_numeric(str_replace(',', '', $v)) ? (str_contains($v, '.') ? (float) str_replace(',', '', $v) : (int) str_replace(',', '', $v)) : $v, $cells);
+
+            return count($values) === count($keys) ? array_combine($keys, $values) : $values;
+        }
+
+        return null;
     }
 
     private function page(string $url): TestResponse
