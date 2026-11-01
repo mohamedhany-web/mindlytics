@@ -149,7 +149,7 @@
             <section class="crm-card">
                 <div class="crm-rel" style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 14px; border-bottom: 1px solid #E5E7EB">
                     <h2 style="margin: 0; font-size: 14px; font-weight: 700; flex: 1 1 100px">العلاقات</h2>
-                    <button type="button" :class="rel.activities && 'is-active'" @click="rel.activities = ! rel.activities" :aria-pressed="rel.activities">الأنشطة {{ $lead->next_follow_up_at ? 1 : 0 }}</button>
+                    <button type="button" :class="rel.activities && 'is-active'" @click="rel.activities = ! rel.activities" :aria-pressed="rel.activities">الأنشطة {{ $planned->where('status', 'planned')->count() }}</button>
                     <button type="button" :class="rel.history && 'is-active'" @click="rel.history = ! rel.history" :aria-pressed="rel.history">السجل {{ $historyTotal }}</button>
                     <button type="button" :class="rel.conversations && 'is-active'" @click="rel.conversations = ! rel.conversations" :aria-pressed="rel.conversations">المحادثات {{ $conversations->count() }}</button>
                     <button type="button" :class="rel.order && 'is-active'" @click="rel.order = ! rel.order" :aria-pressed="rel.order">الطلبات {{ $order ? 1 : 0 }}</button>
@@ -157,17 +157,15 @@
                 </div>
 
                 <div class="crm-subpanel" x-show="rel.activities">
-                    <div class="crm-subpanel-head"><h3>الأنشطة (اللي جاي)</h3></div>
-                    <table class="crm-table crm-table-plain">
-                        <thead><tr><th>الموضوع</th><th>القناة</th><th>الموعد</th><th>الموظف</th></tr></thead>
-                        <tbody>
-                            @if($lead->next_follow_up_at)
-                                <tr><td>متابعة</td><td>{{ $label(SalesLead::FOLLOW_UP_CHANNELS, $lead->follow_up_channel) }}</td><td class="{{ $isLate ? 'crm-bad' : '' }}">{{ $lead->next_follow_up_at->format('d/m/Y H:i') }}</td><td>{{ $lead->assignee?->name ?? '—' }}</td></tr>
-                            @else
-                                <tr><td colspan="4" class="crm-muted" style="text-align: center">مفيش متابعة محددة.</td></tr>
-                            @endif
-                        </tbody>
-                    </table>
+                    <div class="crm-subpanel-head"><h3>الأنشطة</h3><span style="flex: 1"></span>
+                        @foreach(\App\Domains\Sales\Models\SalesPlannedActivity::KINDS as $k => $v)
+                            <a class="crm-btn crm-btn-outline crm-btn-sm" href="{{ route($crm->route('activities.create'), ['kind' => $k, 'lead' => $lead->id, 'redirect_to' => url()->current()]) }}">＋ {{ $v }}</a>
+                        @endforeach
+                    </div>
+                    @if($lead->next_follow_up_at && ! $planned->contains(fn ($a) => $a->isPlanned() && $a->starts_at->format('Y-m-d H:i') === $lead->next_follow_up_at->format('Y-m-d H:i')))
+                        <p style="margin: 0; padding: 8px 10px; font-size: 13px; border-bottom: 1px solid #E5E7EB">المتابعة التالية: <span class="{{ $isLate ? 'crm-bad' : '' }}">{{ $lead->next_follow_up_at->format('d/m/Y H:i') }}</span> · {{ $label(SalesLead::FOLLOW_UP_CHANNELS, $lead->follow_up_channel) }}{{ $isLate ? ' (متأخر)' : '' }}</p>
+                    @endif
+                    @include('sales::crm.partials.planned-table', ['items' => $planned])
                 </div>
 
                 <div class="crm-subpanel" x-show="rel.history">

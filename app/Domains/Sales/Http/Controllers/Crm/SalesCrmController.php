@@ -17,7 +17,6 @@ use App\Domains\Sales\Services\SalesDailyResultService;
 use App\Domains\Sales\Services\SalesLeadOrderLinker;
 use App\Domains\Sales\Services\SalesLeadTransferService;
 use App\Domains\Sales\Services\SalesTeamService;
-use App\Domains\Sales\Support\CrmNavigation;
 use App\Domains\Sales\Support\CrmScope;
 use App\Domains\Sales\Support\PhoneKey;
 use App\Http\Controllers\Controller;
@@ -25,7 +24,6 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -39,6 +37,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class SalesCrmController extends Controller
 {
+    use InteractsWithCrm;
+
     /** مراحل الصفقة: من عرض السعر لحد التسجيل (أو أي عميل اتربط بطلب). */
     public const DEAL_STAGES = ['offer_sent', 'payment_pending', 'payment_received', SalesLead::WON_STAGE, 'upsell'];
 
@@ -82,6 +82,9 @@ class SalesCrmController extends Controller
             'openDeals' => $scope->leads()->whereIn('stage', array_merge(self::OPEN_DEAL_STAGES, [SalesLead::WON_STAGE]))
                 ->whereNull('won_confirmed_at')->with('assignee:id,name')->orderByDesc('updated_at')->limit(6)->get(),
             'openDealsTotal' => $scope->leads()->whereIn('stage', array_merge(self::OPEN_DEAL_STAGES, [SalesLead::WON_STAGE]))->whereNull('won_confirmed_at')->count(),
+            'planned' => $scope->activities()->planned()->where('starts_at', '<=', now()->addDays(7)->endOfDay())
+                ->with(['lead:id,name', 'student:id,name', 'assignee:id,name'])->orderBy('starts_at')->limit(8)->get(),
+            'plannedOverdue' => $scope->activities()->planned()->where('starts_at', '<', now())->count(),
             'stream' => $this->activityQuery($scope)->with(['lead:id,name', 'user:id,name'])->latest('id')->limit(8)->get(),
         ];
 
@@ -271,21 +274,6 @@ class SalesCrmController extends Controller
 
     // ───────────────────────── مساعدات ─────────────────────────
 
-    private function scope(Request $request): CrmScope
-    {
-        return CrmScope::for(Auth::user(), str_starts_with((string) $request->route()?->getName(), 'admin.'));
-    }
-
-    private function view(CrmScope $scope, string $module, string $view, array $data): View
-    {
-        return view('sales::crm.'.$view, $data + [
-            'crm' => $scope,
-            'crmModule' => $module,
-            'crmTabs' => CrmNavigation::tabs($scope),
-            'crmQuickCreate' => CrmNavigation::quickCreate($scope),
-        ]);
-    }
-
     private function findLead(CrmScope $scope, int $id): SalesLead
     {
         $lead = SalesLead::query()->with(['assignee:id,name', 'interestType:id,name_ar', 'category:id,name', 'group:id,name'])->find($id);
@@ -431,6 +419,8 @@ class SalesCrmController extends Controller
             'netPaid' => $order ? $this->linker->netPaid($order) : null,
             'daysInStage' => $lead->stage_entered_at ? (int) $lead->stage_entered_at->diffInDays(now()) : null,
             'members' => $scope->canManage() ? $scope->members() : collect(),
+            'planned' => $scope->activities()->where('sales_lead_id', $lead->id)->with('assignee:id,name')
+                ->orderByRaw("status = 'planned' desc")->orderBy('starts_at')->limit(15)->get(),
         ];
     }
 

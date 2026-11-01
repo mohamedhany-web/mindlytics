@@ -6,7 +6,9 @@ use App\Domains\Accounting\Models\Order;
 use App\Domains\Accounting\Models\Wallet;
 use App\Domains\Hr\Models\EmployeeJob;
 use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Sales\Models\SalesActivity;
 use App\Domains\Sales\Models\SalesLead;
+use App\Domains\Sales\Models\SalesPlannedActivity;
 use App\Domains\Sales\Models\SalesTeam;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -158,6 +160,122 @@ class SalesCrmSmokeTest extends SmokeTestCase
 
         $this->actingAs($this->admin);
         $this->assertNavLinksWork($home);
+    }
+
+    public function test_rep_schedules_and_completes_a_call_and_sees_it_everywhere(): void
+    {
+        $this->actingAs($this->rep);
+        $lead = $this->lead($this->rep, 'Smoke CRM Plan Lead', ['next_follow_up_at' => null]);
+        $when = now()->addDay()->setTime(11, 30);
+
+        $this->page('/employee/crm/activities/create?lead='.$lead->id)->assertSee('Smoke CRM Plan Lead');
+        $this->post('/employee/crm/activities', [
+            'kind' => 'call', 'title' => 'Smoke planned call', 'sales_lead_id' => $lead->id, 'assigned_to' => $this->rep->id,
+            'starts_at' => $when->format('Y-m-d\TH:i'), 'duration_minutes' => 10, 'priority' => 'high',
+        ])->assertSessionHasNoErrors()->assertRedirect();
+        $planned = SalesPlannedActivity::where('title', 'Smoke planned call')->firstOrFail();
+        $this->assertSame($this->rep->id, (int) $planned->created_by);
+        $this->assertSame($when->format('Y-m-d H:i'), $lead->fresh()->next_follow_up_at?->format('Y-m-d H:i'), 'scheduling pulls the lead follow-up forward');
+
+        foreach (['open', 'today', 'overdue', 'week', 'done', 'all'] as $quick) {
+            $this->page('/employee/crm/activities?quick='.$quick);
+        }
+        $this->page('/employee/crm/activities?quick=open&q=Smoke%20planned')->assertSee('Smoke planned call');
+        $this->page('/employee/crm/leads/'.$lead->id)->assertSee('Smoke planned call');
+        $this->page('/employee/crm')->assertSee('Smoke planned call');
+        foreach (['week', 'month', 'day', 'shared'] as $view) {
+            $this->page('/employee/crm/calendar?view='.$view.'&date='.$when->toDateString())->assertSee('Smoke planned call');
+        }
+        $this->page('/employee/crm/activities/'.$planned->id)->assertSee('تسجيل النتيجة');
+        $this->page('/employee/crm/activities/'.$planned->id.'/edit');
+
+        // التنفيذ: يتسجّل في سجل العميل (KPIs) ويحرّك المرحلة ويشيل المتابعة
+        $this->post('/employee/crm/activities/'.$planned->id.'/complete', ['status' => 'done'])->assertSessionHasErrors('outcome');
+        $this->post('/employee/crm/activities/'.$planned->id.'/complete', ['status' => 'done', 'outcome' => 'interested', 'result_notes' => 'smoke ok', 'apply_stage' => 1])
+            ->assertSessionHasNoErrors()->assertRedirect();
+        $planned->refresh();
+        $this->assertSame('done', $planned->status);
+        $this->assertNotNull($planned->sales_activity_id);
+        $this->assertTrue(SalesActivity::whereKey($planned->sales_activity_id)->where('sales_lead_id', $lead->id)->where('type', 'call')->where('user_id', $this->rep->id)->exists());
+        $this->assertSame('interested', SalesActivity::find($planned->sales_activity_id)->outcome);
+        $this->assertNotSame('new_lead', $lead->fresh()->stage, 'call outcome moves the stage like the quick log');
+        $this->post('/employee/crm/activities/'.$planned->id.'/complete', ['status' => 'done', 'outcome' => 'interested'])->assertForbidden();
+
+        // خارج النطاق
+        $foreign = SalesPlannedActivity::create(['kind' => 'call', 'title' => 'Smoke foreign call', 'sales_lead_id' => $this->outsiderLead->id, 'assigned_to' => $this->outsider->id, 'starts_at' => $when]);
+        $this->get('/employee/crm/activities/'.$foreign->id)->assertNotFound();
+        $this->page('/employee/crm/activities?quick=all&q=Smoke%20foreign')->assertDontSee('Smoke foreign call');
+        $this->post('/employee/crm/activities', ['kind' => 'call', 'title' => 'x', 'sales_lead_id' => $this->outsiderLead->id, 'assigned_to' => $this->rep->id, 'starts_at' => $when->format('Y-m-d\TH:i')])
+            ->assertSessionHasErrors('sales_lead_id');
+        $this->post('/employee/crm/activities', ['kind' => 'call', 'title' => 'x', 'sales_lead_id' => $lead->id, 'assigned_to' => $this->outsider->id, 'starts_at' => $when->format('Y-m-d\TH:i')])
+            ->assertSessionHasErrors('assigned_to');
+    }
+
+    public function test_students_module_is_scoped_by_role(): void
+    {
+        $mine = User::forceCreate(['name' => 'Smoke CRM Student Mine', 'email' => 'smoke-sm-'.Str::lower(Str::random(6)).'@example.test', 'phone' => '+2010'.random_int(10000000, 99999999), 'password' => bcrypt('password'), 'role' => 'student', 'is_active' => true]);
+        $theirs = User::forceCreate(['name' => 'Smoke CRM Student Theirs', 'email' => 'smoke-st-'.Str::lower(Str::random(6)).'@example.test', 'phone' => '+2010'.random_int(10000000, 99999999), 'password' => bcrypt('password'), 'role' => 'student', 'is_active' => true]);
+        SalesLead::whereKey($this->repLead->id)->update(['student_user_id' => $mine->id]);
+        SalesLead::whereKey($this->outsiderLead->id)->update(['student_user_id' => $theirs->id]);
+
+        $this->actingAs($this->rep);
+        $this->page('/employee/crm/students?q=Smoke%20CRM%20Student')->assertSee('Smoke CRM Student Mine')->assertDontSee('Smoke CRM Student Theirs');
+        $this->page('/employee/crm/students/'.$mine->id)->assertSee('Smoke CRM Rep Lead')->assertSee('الكورسات');
+        $this->get('/employee/crm/students/'.$theirs->id)->assertNotFound();
+        $this->get('/employee/crm/students/'.$this->rep->id)->assertNotFound();
+
+        // جدولة مهمة على الطالب
+        $this->post('/employee/crm/activities', ['kind' => 'task', 'title' => 'Smoke student task', 'student_user_id' => $mine->id, 'assigned_to' => $this->rep->id, 'starts_at' => now()->addDays(2)->format('Y-m-d\TH:i')])
+            ->assertSessionHasNoErrors();
+        $this->page('/employee/crm/students/'.$mine->id)->assertSee('Smoke student task');
+        $this->post('/employee/crm/activities', ['kind' => 'task', 'title' => 'x', 'student_user_id' => $theirs->id, 'assigned_to' => $this->rep->id, 'starts_at' => now()->addDays(2)->format('Y-m-d\TH:i')])
+            ->assertSessionHasErrors('student_user_id');
+
+        $this->actingAs($this->manager);
+        $this->page('/employee/crm/students?q=Smoke%20CRM%20Student')->assertSee('Smoke CRM Student Mine')->assertDontSee('Smoke CRM Student Theirs');
+
+        $this->actingAs($this->admin);
+        $this->page('/admin/crm/students?q=Smoke%20CRM%20Student')->assertSee('Smoke CRM Student Mine')->assertSee('Smoke CRM Student Theirs');
+        $this->page('/admin/crm/students/'.$theirs->id)->assertSee('Smoke CRM Outsider Lead');
+    }
+
+    public function test_manager_assigns_to_team_and_admin_sees_all_activities(): void
+    {
+        $when = now()->addDays(3)->setTime(13, 0);
+        $this->actingAs($this->manager);
+        $this->post('/employee/crm/activities', ['kind' => 'meeting', 'title' => 'Smoke team meeting', 'sales_lead_id' => $this->repLead->id, 'assigned_to' => $this->rep->id, 'starts_at' => $when->format('Y-m-d\TH:i'), 'duration_minutes' => 30])
+            ->assertSessionHasNoErrors();
+        $meeting = SalesPlannedActivity::where('title', 'Smoke team meeting')->firstOrFail();
+        $this->post('/employee/crm/activities', ['kind' => 'call', 'title' => 'x', 'sales_lead_id' => $this->repLead->id, 'assigned_to' => $this->outsider->id, 'starts_at' => $when->format('Y-m-d\TH:i')])
+            ->assertSessionHasErrors('assigned_to');
+        $this->get('/employee/crm/activities/create?lead='.$this->outsiderLead->id)->assertOk()->assertDontSee('Smoke CRM Outsider Lead');
+
+        $this->page('/employee/crm/calendar?view=shared&date='.$when->toDateString())->assertSee('Smoke team meeting')->assertSee($this->rep->name);
+        $this->page('/employee/crm/calendar?view=week&user='.$this->rep->id.'&date='.$when->toDateString())->assertSee('Smoke team meeting');
+        $this->post('/employee/crm/activities/'.$meeting->id.'/complete', ['status' => 'done'])->assertForbidden();
+        $this->put('/employee/crm/activities/'.$meeting->id, ['title' => 'Smoke team meeting moved', 'assigned_to' => $this->rep->id, 'starts_at' => $when->copy()->addHour()->format('Y-m-d\TH:i')])
+            ->assertSessionHasNoErrors();
+        $this->assertSame($when->copy()->addHour()->format('Y-m-d H:i'), $meeting->fresh()->starts_at->format('Y-m-d H:i'));
+
+        $this->actingAs($this->rep);
+        $this->page('/employee/crm/activities?quick=all&q=Smoke%20team')->assertSee('Smoke team meeting moved');
+
+        $this->actingAs($this->admin);
+        foreach (['open', 'today', 'overdue', 'week', 'done', 'all'] as $quick) {
+            $this->page('/admin/crm/activities?quick='.$quick);
+        }
+        $this->page('/admin/crm/activities?quick=all&q=Smoke%20team')->assertSee('Smoke team meeting moved');
+        foreach (['week', 'month', 'day', 'shared'] as $view) {
+            $this->page('/admin/crm/calendar?view='.$view.'&date='.$when->toDateString());
+        }
+        $this->page('/admin/crm/activities/'.$meeting->id)->assertSee('تسجيل النتيجة');
+        $this->post('/admin/crm/activities/'.$meeting->id.'/complete', ['status' => 'missed', 'result_notes' => 'no show'])->assertSessionHasNoErrors();
+        $this->assertSame('missed', $meeting->fresh()->status);
+        $this->assertNull($meeting->fresh()->sales_activity_id, 'a missed meeting is not logged as contact');
+
+        $task = SalesPlannedActivity::create(['kind' => 'task', 'title' => 'Smoke cancel me', 'assigned_to' => $this->rep->id, 'created_by' => $this->manager->id, 'starts_at' => $when]);
+        $this->actingAs($this->manager)->post('/employee/crm/activities/'.$task->id.'/cancel')->assertRedirect();
+        $this->assertSame('cancelled', $task->fresh()->status);
     }
 
     /** يفتح كل روابط الشريط العلوي (قوائم الوحدات و«+») للدور الحالي: ممنوع 403 أو 404 أو 500. */

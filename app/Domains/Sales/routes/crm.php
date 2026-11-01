@@ -1,6 +1,9 @@
 <?php
 
+use App\Domains\Sales\Http\Controllers\Crm\SalesCrmActivityController;
+use App\Domains\Sales\Http\Controllers\Crm\SalesCrmCalendarController;
 use App\Domains\Sales\Http\Controllers\Crm\SalesCrmController;
+use App\Domains\Sales\Http\Controllers\Crm\SalesCrmStudentController;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -16,3 +19,17 @@ Route::get('leads/{lead}/convert', [SalesCrmController::class, 'convertForm'])->
 Route::post('leads/{lead}/convert', [SalesCrmController::class, 'convert'])->whereNumber('lead')->name('leads.convert.store');
 Route::get('deals', [SalesCrmController::class, 'deals'])->name('deals.index');
 Route::get('deals/{lead}', [SalesCrmController::class, 'deal'])->whereNumber('lead')->name('deals.show');
+
+Route::get('students', [SalesCrmStudentController::class, 'index'])->name('students.index');
+Route::get('students/{student}', [SalesCrmStudentController::class, 'show'])->whereNumber('student')->name('students.show');
+
+Route::get('activities', [SalesCrmActivityController::class, 'index'])->name('activities.index');
+Route::get('activities/create', [SalesCrmActivityController::class, 'create'])->name('activities.create');
+Route::post('activities', [SalesCrmActivityController::class, 'store'])->name('activities.store');
+Route::get('activities/{activity}', [SalesCrmActivityController::class, 'show'])->whereNumber('activity')->name('activities.show');
+Route::get('activities/{activity}/edit', [SalesCrmActivityController::class, 'edit'])->whereNumber('activity')->name('activities.edit');
+Route::put('activities/{activity}', [SalesCrmActivityController::class, 'update'])->whereNumber('activity')->name('activities.update');
+Route::post('activities/{activity}/complete', [SalesCrmActivityController::class, 'complete'])->whereNumber('activity')->name('activities.complete');
+Route::post('activities/{activity}/cancel', [SalesCrmActivityController::class, 'cancel'])->whereNumber('activity')->name('activities.cancel');
+
+Route::get('calendar', [SalesCrmCalendarController::class, 'index'])->name('calendar');

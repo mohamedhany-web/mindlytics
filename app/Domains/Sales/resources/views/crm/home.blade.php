@@ -93,6 +93,32 @@
             </section>
 
             <section class="crm-card">
+                <div class="crm-dashlet-head"><i class="fas fa-tasks"></i><h2>{{ $crm->isRep() ? 'أنشطتي' : 'أنشطة الفريق' }} — المتأخر و7 أيام</h2></div>
+                <div style="overflow-x: auto">
+                    <table class="crm-table" style="min-width: 560px">
+                        <thead><tr><th>النشاط</th><th>على</th><th>الموعد</th>@unless($crm->isRep())<th>المكلَّف</th>@endunless</tr></thead>
+                        <tbody>
+                            @forelse($planned as $a)
+                                <tr @if($a->isOverdue()) style="background: #FDF3F1" @endif>
+                                    <td><i class="fas {{ \App\Domains\Sales\Models\SalesPlannedActivity::KIND_ICONS[$a->kind] ?? 'fa-circle' }}" style="color: #534D64"></i> <a class="crm-link" href="{{ route($crm->route('activities.show'), $a->id) }}">{{ $a->title }}</a></td>
+                                    <td>@if($a->lead)<a class="crm-link" style="font-weight: 400" href="{{ $leadUrl($a->lead->id) }}">{{ $a->lead->name }}</a>@else{{ $a->student?->name ?? '—' }}@endif</td>
+                                    <td class="{{ $a->isOverdue() ? 'crm-bad' : '' }}">{{ $a->starts_at->format('d/m H:i') }}</td>
+                                    @unless($crm->isRep())<td>{{ $a->assignee?->name ?? '—' }}</td>@endunless
+                                </tr>
+                            @empty
+                                <tr><td colspan="4" class="crm-muted" style="text-align: center; padding: 18px">مفيش أنشطة مجدولة. جدول مكالمة أو اجتماع من ملف العميل.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+                <div class="crm-dashlet-foot">
+                    <span>{{ $plannedOverdue }} متأخرة</span>
+                    <a href="{{ route($crm->route('activities.index'), ['quick' => 'overdue']) }}">المتأخر</a>
+                    <a href="{{ route($crm->route('calendar')) }}">الكاليندر</a>
+                </div>
+            </section>
+
+            <section class="crm-card">
                 <div class="crm-dashlet-head"><i class="fas fa-lightbulb"></i><h2>{{ $crm->isRep() ? 'صفقاتي المفتوحة' : 'الصفقات المفتوحة' }}</h2></div>
                 <div style="overflow-x: auto">
                     <table class="crm-table" style="min-width: 520px">

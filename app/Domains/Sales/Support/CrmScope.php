@@ -2,7 +2,10 @@
 
 namespace App\Domains\Sales\Support;
 
+use App\Domains\Accounting\Models\Order;
 use App\Domains\Sales\Models\SalesLead;
+use App\Domains\Sales\Models\SalesPlannedActivity;
+use App\Domains\Sales\Services\SalesLeadOrderLinker;
 use App\Domains\Sales\Services\SalesTeamService;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -99,6 +102,86 @@ final class CrmScope
         }
 
         return $query->get(['id', 'name']);
+    }
+
+    /**
+     * الطلاب (Contacts): الأدمن يشوف كل الطلاب؛ الموظف والمدير يشوفوا الطلاب المرتبطين بعملاء نطاقهم
+     * (العميل اتحوّل للطالب ده أو اتربط بطلب الطالب ده).
+     */
+    public function students(): Builder
+    {
+        $query = User::query()->where('role', 'student');
+        if ($this->assigneeIds === null) {
+            return $query;
+        }
+
+        return $query->where(function ($q) {
+            $q->whereIn('id', $this->leads()->select('student_user_id')->whereNotNull('student_user_id'));
+            if (SalesLeadOrderLinker::ready()) {
+                $q->orWhereIn('id', Order::query()->select('user_id')
+                    ->whereIn('id', $this->leads()->select('order_id')->whereNotNull('order_id')));
+            }
+        });
+    }
+
+    public function canSeeStudent(User $student): bool
+    {
+        return $this->students()->whereKey($student->id)->exists();
+    }
+
+    /** الأنشطة المخططة ضمن النطاق (المكلَّف بيها أو اللي أنشأها). */
+    public function activities(): Builder
+    {
+        $query = SalesPlannedActivity::query();
+        if ($this->assigneeIds !== null) {
+            $ids = $this->assigneeIds === [] ? [0] : $this->assigneeIds;
+            $query->where(fn ($q) => $q->whereIn('assigned_to', $ids)->orWhere('created_by', $this->user->id)->orWhere('assigned_to', $this->user->id));
+        }
+
+        return $query;
+    }
+
+    public function canSeeActivity(SalesPlannedActivity $activity): bool
+    {
+        return $this->assigneeIds === null
+            || in_array((int) $activity->assigned_to, $this->assigneeIds, true)
+            || (int) $activity->assigned_to === (int) $this->user->id
+            || (int) $activity->created_by === (int) $this->user->id;
+    }
+
+    /** تنفيذ النشاط وتسجيل نتيجته: المكلَّف بيه أو الأدمن. */
+    public function canComplete(SalesPlannedActivity $activity): bool
+    {
+        return $activity->isPlanned() && ($this->isAdmin() || (int) $activity->assigned_to === (int) $this->user->id);
+    }
+
+    /** تعديل الموعد أو الإلغاء: المكلَّف، اللي أنشأه، المدير على فريقه، والأدمن. */
+    public function canEditActivity(SalesPlannedActivity $activity): bool
+    {
+        return $activity->isPlanned() && $this->canSeeActivity($activity) && (
+            $this->canManage()
+            || (int) $activity->assigned_to === (int) $this->user->id
+            || (int) $activity->created_by === (int) $this->user->id
+        );
+    }
+
+    /**
+     * مين ينفع يتكلّف بنشاط: الموظف لنفسه؛ المدير لنفسه أو لفريقه؛ الأدمن لنفسه أو لأي موظف مبيعات.
+     *
+     * @return Collection<int, User>
+     */
+    public function assignableUsers(): Collection
+    {
+        if ($this->isRep()) {
+            return collect([$this->user]);
+        }
+
+        $members = $this->members();
+        if (! $members->contains('id', $this->user->id)) {
+            $members->prepend($this->user);
+        }
+
+        return $members;
     }
 
     public function route(string $name): string

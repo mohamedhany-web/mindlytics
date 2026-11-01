@@ -41,6 +41,21 @@ final class CrmNavigation
                 ),
             ],
             [
+                'key' => 'students', 'label' => 'الطلاب', 'route' => $scope->route('students.index'),
+                'items' => array_merge(
+                    [['عرض الطلاب', $scope->route('students.index')]],
+                    $scope->isAdmin() ? [['إدارة المستخدمين', 'admin.users.index']] : [],
+                ),
+            ],
+            [
+                'key' => 'activities', 'label' => 'الأنشطة', 'route' => $scope->route('activities.index'),
+                'items' => [
+                    ['عرض الأنشطة', $scope->route('activities.index')],
+                    ['＋ جدولة نشاط', $scope->route('activities.create')],
+                    ['المتأخرة', $scope->route('activities.index'), ['quick' => 'overdue']],
+                ],
+            ],
+            [
                 'key' => 'inbox', 'label' => 'المحادثات', 'route' => $scope->isRep() ? 'employee.sales.whatsapp.inbox.index' : ($scope->isManager() ? 'employee.sales-manager.whatsapp.inbox.index' : 'admin.whatsapp.inbox'),
                 'items' => array_merge(
                     $scope->isRep() ? [['واتساب', 'employee.sales.whatsapp.inbox.index'], ['Messenger و Instagram', 'employee.sales.meta-social.inbox.index']] : [],
@@ -49,8 +64,10 @@ final class CrmNavigation
                 ),
             ],
             [
-                'key' => 'calendar', 'label' => 'الكاليندر', 'route' => $scope->isRep() ? 'employee.sales.shifts.index' : ($scope->isManager() ? 'employee.sales-manager.schedule-calendar.index' : 'admin.sales.schedule-calendar.index'),
+                'key' => 'calendar', 'label' => 'الكاليندر', 'route' => $scope->route('calendar'),
                 'items' => array_merge(
+                    [['كاليندر الأنشطة', $scope->route('calendar')]],
+                    $scope->isRep() ? [] : [['الكاليندر المشترك للفريق', $scope->route('calendar'), ['view' => 'shared']]],
                     $scope->isRep() ? [['جدول الشيفتات', 'employee.sales.shifts.index']] : [],
                     $scope->isManager() ? [['تقويم الحضور والإجازات', 'employee.sales-manager.schedule-calendar.index'], ['شيفتات الفريق', 'employee.sales-manager.shifts.index'], ['طلبات تبديل الشيفت', 'employee.sales-manager.shift-swaps.index']] : [],
                     $scope->isAdmin() ? [['تقويم الشيفت', 'admin.sales.schedule-calendar.index'], ['الشيفتات والقنوات', 'admin.sales.shifts.index']] : [],
@@ -77,9 +94,10 @@ final class CrmNavigation
         $out = [];
         foreach ($tabs as $tab) {
             $items = [];
-            foreach ($tab['items'] as [$label, $route]) {
+            foreach ($tab['items'] as $item) {
+                [$label, $route] = $item;
                 if (Route::has($route)) {
-                    $items[] = ['label' => $label, 'url' => route($route)];
+                    $items[] = ['label' => $label, 'url' => route($route, $item[2] ?? [])];
                 }
             }
             $url = $tab['route'] && Route::has($tab['route']) ? route($tab['route']) : ($items[0]['url'] ?? null);
@@ -100,9 +118,10 @@ final class CrmNavigation
             $scope->isAdmin() => [['عميل محتمل', 'admin.sales.leads.create'], ['مجموعة عملاء', 'admin.sales.groups.create'], ['فريق مبيعات', 'admin.sales.sales-teams.create']],
             default => [],
         };
+        $candidates = array_merge($candidates, [['مكالمة', $scope->route('activities.create')], ['اجتماع', $scope->route('activities.create'), ['kind' => 'meeting']], ['مهمة', $scope->route('activities.create'), ['kind' => 'task']]]);
 
         return array_values(array_map(
-            fn ($c) => ['label' => $c[0], 'url' => route($c[1])],
+            fn ($c) => ['label' => $c[0], 'url' => route($c[1], $c[2] ?? [])],
             array_filter($candidates, fn ($c) => Route::has($c[1]))
         ));
     }
