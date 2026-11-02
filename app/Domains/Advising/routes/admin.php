@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('advising')->name('advising.')->group(function () {
     Route::get('/', [AdvisingAdminController::class, 'bookings'])->name('bookings');
     Route::put('bookings/{booking}', [AdvisingAdminController::class, 'updateBooking'])->whereNumber('booking')->name('bookings.update');
+    Route::post('bookings/{booking}/crm', [AdvisingAdminController::class, 'linkBooking'])->whereNumber('booking')->name('bookings.crm');
     Route::get('availability', [AdvisingAdminController::class, 'availability'])->name('availability');
     Route::post('availability', [AdvisingAdminController::class, 'storeRule'])->name('availability.store');
     Route::put('availability/{rule}', [AdvisingAdminController::class, 'updateRule'])->whereNumber('rule')->name('availability.update');

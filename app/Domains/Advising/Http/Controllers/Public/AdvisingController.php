@@ -5,6 +5,7 @@ namespace App\Domains\Advising\Http\Controllers\Public;
 use App\Domains\Advising\Models\AdvisingAvailability;
 use App\Domains\Advising\Models\AdvisingBooking;
 use App\Domains\Advising\Services\AdvisingBookingService;
+use App\Domains\Advising\Services\AdvisingCrmSync;
 use App\Domains\Advising\Services\AdvisingSlots;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -29,7 +30,7 @@ class AdvisingController extends Controller
         return response()->json(['days' => $this->presentDays($slots->days())]);
     }
 
-    public function store(Request $request, AdvisingBookingService $service): JsonResponse|RedirectResponse
+    public function store(Request $request, AdvisingBookingService $service, AdvisingCrmSync $crm): JsonResponse|RedirectResponse
     {
         // Honeypot: البوتات بتملاه
         if ($request->filled('website')) {
@@ -52,6 +53,7 @@ class AdvisingController extends Controller
             'source_url' => (string) $request->headers->get('referer', ''),
             'ip' => $request->ip(),
         ]);
+        $crm->onBooked($booking); // عميل محتمل + اجتماع في كاليندر الموظف (docs/ADVISING.md)
 
         $summary = $this->summary($booking);
         if ($request->expectsJson()) {

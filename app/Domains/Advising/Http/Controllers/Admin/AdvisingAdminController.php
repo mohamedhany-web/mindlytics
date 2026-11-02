@@ -5,6 +5,7 @@ namespace App\Domains\Advising\Http\Controllers\Admin;
 use App\Domains\Advising\Models\AdvisingAvailability;
 use App\Domains\Advising\Models\AdvisingBlockedDate;
 use App\Domains\Advising\Models\AdvisingBooking;
+use App\Domains\Advising\Services\AdvisingCrmSync;
 use App\Domains\Advising\Services\AdvisingSettings;
 use App\Domains\Advising\Services\AdvisingSlots;
 use App\Http\Controllers\Controller;
@@ -25,7 +26,7 @@ class AdvisingAdminController extends Controller
         $range = array_key_exists((string) $request->query('range'), self::RANGES) ? (string) $request->query('range') : 'upcoming';
         $status = array_key_exists((string) $request->query('status'), AdvisingBooking::STATUSES) ? (string) $request->query('status') : null;
 
-        $query = AdvisingBooking::query()->with('advisor:id,name');
+        $query = AdvisingBooking::query()->with(['advisor:id,name', 'lead:id,name,assigned_to,stage', 'lead.assignee:id,name']);
         match ($range) {
             'upcoming' => $query->where('starts_at', '>=', now()->startOfDay())->orderBy('starts_at'),
             'today' => $query->whereDate('starts_at', today())->orderBy('starts_at'),
@@ -56,7 +57,7 @@ class AdvisingAdminController extends Controller
         ]);
     }
 
-    public function updateBooking(Request $request, AdvisingBooking $booking): RedirectResponse
+    public function updateBooking(Request $request, AdvisingBooking $booking, AdvisingCrmSync $crm): RedirectResponse
     {
         $data = $request->validate([
             'status' => ['required', Rule::in(array_keys(AdvisingBooking::STATUSES))],
@@ -64,9 +65,21 @@ class AdvisingAdminController extends Controller
             'outcome' => ['nullable', 'string', 'max:5000'],
             'recommended_program' => ['nullable', 'string', 'max:255'],
         ]);
+        $before = $booking->only(['status', 'outcome', 'recommended_program', 'advisor_id']);
         $booking->update($data);
+        $crm->onUpdated($booking->fresh(), $before);
 
         return back()->with('success', 'اتحفظ حجز '.$booking->name.'.');
+    }
+
+    /** ربط حجز بالـ CRM يدوياً (لو الربط كان مقفول وقت الحجز، أو حصلت مشكلة). */
+    public function linkBooking(AdvisingBooking $booking, AdvisingCrmSync $crm): RedirectResponse
+    {
+        $crm->onBooked($booking);
+
+        return back()->with($booking->fresh()->sales_lead_id ? 'success' : 'error', $booking->fresh()->sales_lead_id
+            ? 'اتربط حجز '.$booking->name.' بالـ CRM.'
+            : 'ما اتربطش. اتأكد إن ربط الـ CRM مفعّل في إعدادات الإرشاد.');
     }
 
     public function availability(): View
@@ -76,6 +89,7 @@ class AdvisingAdminController extends Controller
             'blocked' => AdvisingBlockedDate::query()->where('date', '>=', today())->orderBy('date')->get(),
             'settings' => AdvisingSettings::get(),
             'advisors' => $this->advisors(),
+            'salesStaff' => User::salesEmployees()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'preview' => array_slice(app(AdvisingSlots::class)->days(), 0, 5),
         ]);
     }
@@ -128,8 +142,9 @@ class AdvisingAdminController extends Controller
         $data = $request->validate([
             'window_days' => ['required', 'integer', 'min:1', 'max:60'],
             'min_notice_hours' => ['required', 'integer', 'min:0', 'max:72'],
+            'crm_assignee_id' => ['nullable', 'integer', 'exists:users,id'],
         ]);
-        AdvisingSettings::save($data + ['enabled' => $request->boolean('enabled')]);
+        AdvisingSettings::save($data + ['enabled' => $request->boolean('enabled'), 'crm_sync' => $request->boolean('crm_sync')]);
 
         return back()->with('success', 'اتحفظت إعدادات الحجز.');
     }
