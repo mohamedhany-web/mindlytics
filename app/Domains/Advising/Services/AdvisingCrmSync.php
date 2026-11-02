@@ -6,7 +6,6 @@ use App\Domains\Advising\Models\AdvisingAvailability;
 use App\Domains\Advising\Models\AdvisingBooking;
 use App\Domains\Sales\Models\SalesActivity;
 use App\Domains\Sales\Models\SalesLead;
-use App\Domains\Sales\Models\SalesPlannedActivity;
 use App\Domains\Sales\Services\SalesAuditService;
 use App\Domains\Sales\Services\SalesLeadMovementPolicy;
 use App\Domains\Sales\Services\SalesNotificationService;
@@ -17,11 +16,17 @@ use Illuminate\Support\Facades\DB;
  * ربط حجوزات الإرشاد بالـ CRM (docs/ADVISING.md):
  * - كل حجز = عميل محتمل. لو نفس الموبايل أو الإيميل موجود بيتربط بيه ويفضل مع صاحبه، وإلا بيتعمل عميل جديد من الموقع.
  * - صاحب العميل الجديد: مرشد الجلسة لو موظف مبيعات، وإلا الموظف المختار في إعدادات الإرشاد، وإلا طابور «من غير موظف».
- * - الجلسة بتظهر اجتماع مخطط في كاليندر صاحب العميل، ونتيجتها بتتسجّل في سجل العميل.
+ * - الجلسة بتظهر اجتماع مخطط في كاليندر صاحب العميل (لو الأنشطة المخططة موجودة في النسخة دي)، ونتيجتها بتتسجّل في سجل العميل.
  * أي مشكلة في الربط ما بتوقفش الحجز نفسه (بتتسجّل في اللوج بس).
  */
 class AdvisingCrmSync
 {
+    /** موديل الأنشطة المخططة (كاليندر الـ CRM) جنب SalesLead. بيتحسب وقت التشغيل لأنه جزء من مرحلة CRM ممكن ما تكونش في النسخة دي. */
+    private static function plannedClass(): string
+    {
+        return substr(SalesLead::class, 0, (int) strrpos(SalesLead::class, '\\')).'\\SalesPlannedActivity';
+    }
+
     public function onBooked(AdvisingBooking $booking): void
     {
         if (! AdvisingSettings::get()['crm_sync'] || $booking->sales_lead_id) {
@@ -69,8 +74,8 @@ class AdvisingCrmSync
                 }
 
                 $planned = null;
-                if ($lead->assigned_to) {
-                    $planned = SalesPlannedActivity::create([
+                if ($lead->assigned_to && $this->plannedActivitiesAvailable()) {
+                    $planned = (self::plannedClass())::create([
                         'kind' => 'meeting',
                         'title' => 'جلسة إرشاد مهني — '.$booking->name,
                         'description' => $this->summary($booking),
@@ -109,7 +114,7 @@ class AdvisingCrmSync
             if (! $lead) {
                 return;
             }
-            $planned = $booking->sales_planned_activity_id ? SalesPlannedActivity::query()->find($booking->sales_planned_activity_id) : null;
+            $planned = $booking->sales_planned_activity_id && $this->plannedActivitiesAvailable() ? (self::plannedClass())::query()->find($booking->sales_planned_activity_id) : null;
 
             // المرشد الجديد موظف مبيعات والعميل لسه من غير موظف: يستلمه
             if (! $lead->assigned_to && $booking->advisor_id && $this->isSalesStaff($booking->advisor_id)) {
@@ -220,6 +225,12 @@ class AdvisingCrmSync
             filled($booking->notes) ? 'كلامه عن وضعه: '.$booking->notes : null,
             '[advising_booking:'.$booking->id.']',
         ])));
+    }
+
+    /** الأنشطة المخططة (كاليندر الـ CRM) جزء من مرحلة CRM ممكن ما تكونش منشورة لسه. */
+    private function plannedActivitiesAvailable(): bool
+    {
+        return class_exists(self::plannedClass()) && \Illuminate\Support\Facades\Schema::hasTable('sales_planned_activities');
     }
 
     private function safely(callable $fn): void

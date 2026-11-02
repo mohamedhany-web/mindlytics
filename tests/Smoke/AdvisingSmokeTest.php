@@ -118,10 +118,15 @@ class AdvisingSmokeTest extends SmokeTestCase
         $this->assertSame('website', $lead->source);
         $this->assertSame('high', $lead->priority);
         $this->assertTrue(SalesActivity::where('sales_lead_id', $lead->id)->where('title', 'حجز جلسة إرشاد مهني من الموقع')->exists());
-        $meeting = SalesPlannedActivity::findOrFail($booking->sales_planned_activity_id);
-        $this->assertSame('meeting', $meeting->kind);
-        $this->assertSame($rep->id, (int) $meeting->assigned_to);
-        $this->assertSame($booking->starts_at->toDateTimeString(), $meeting->starts_at->toDateTimeString());
+        $hasPlanned = class_exists(SalesPlannedActivity::class) && \Illuminate\Support\Facades\Schema::hasTable('sales_planned_activities');
+        if ($hasPlanned) {
+            $meeting = SalesPlannedActivity::findOrFail($booking->sales_planned_activity_id);
+            $this->assertSame('meeting', $meeting->kind);
+            $this->assertSame($rep->id, (int) $meeting->assigned_to);
+            $this->assertSame($booking->starts_at->toDateTimeString(), $meeting->starts_at->toDateTimeString());
+        } else {
+            $this->assertNull($booking->sales_planned_activity_id); // من غير كاليندر الـ CRM: عميل ونشاط بس
+        }
 
         // الجلسة اتعملت: النتيجة في سجل العميل، والبرنامج المرشَّح بقى اهتمامه، والاجتماع اتقفل
         $this->actingAs($this->admin)->put(route('admin.advising.bookings.update', $booking), [
@@ -129,7 +134,9 @@ class AdvisingSmokeTest extends SmokeTestCase
         ])->assertRedirect();
         $this->assertTrue(SalesActivity::where('sales_lead_id', $lead->id)->where('title', 'نتيجة جلسة الإرشاد المهني')->exists());
         $this->assertSame('Smoke Recommended Program', $lead->fresh()->interest);
-        $this->assertSame('done', $meeting->fresh()->status);
+        if ($hasPlanned) {
+            $this->assertSame('done', $meeting->fresh()->status);
+        }
 
         $this->actingAs($this->admin)->get(route('admin.advising.bookings', ['range' => 'all']))->assertOk()->assertSee(route('admin.crm.leads.show', $lead->id), false);
     }
@@ -152,7 +159,9 @@ class AdvisingSmokeTest extends SmokeTestCase
         $this->assertSame($booking->starts_at->toDateTimeString(), $lead->fresh()->next_follow_up_at->toDateTimeString()); // الجلسة أقرب من المتابعة القديمة
 
         $this->actingAs($this->admin)->put(route('admin.advising.bookings.update', $booking), ['status' => 'cancelled'])->assertRedirect();
-        $this->assertSame('cancelled', SalesPlannedActivity::findOrFail($booking->sales_planned_activity_id)->status);
+        if (class_exists(SalesPlannedActivity::class) && \Illuminate\Support\Facades\Schema::hasTable('sales_planned_activities')) {
+            $this->assertSame('cancelled', SalesPlannedActivity::findOrFail($booking->sales_planned_activity_id)->status);
+        }
         $this->assertTrue(SalesActivity::where('sales_lead_id', $lead->id)->where('title', 'اتلغت جلسة الإرشاد المهني')->exists());
     }
 

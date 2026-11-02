@@ -73,11 +73,6 @@ class AdvisingBooking extends Model
         return $this->belongsTo(\App\Domains\Sales\Models\SalesLead::class, 'sales_lead_id');
     }
 
-    public function plannedActivity(): BelongsTo
-    {
-        return $this->belongsTo(\App\Domains\Sales\Models\SalesPlannedActivity::class, 'sales_planned_activity_id');
-    }
-
     public function availability(): BelongsTo
     {
         return $this->belongsTo(AdvisingAvailability::class, 'availability_id');
