@@ -45,8 +45,11 @@
             position: fixed !important; top: 0; left: 0; right: 0; z-index: 1000 !important;
         }
     </style>
+    {{-- هوية الموقع الموحّدة (docs/SITE_DESIGN.md) --}}
+    @include('components.site.styles')
+    @include('components.site.legacy-theme')
 </head>
-<body class="bg-gray-50 text-gray-900" x-data="{ mobileMenu: false, method: '{{ old('payment_method', 'bank_transfer') }}' }" :class="{ 'overflow-hidden': mobileMenu }">
+<body class="h-site h-has-mobile-bar" x-data="{ mobileMenu: false, method: '{{ old('payment_method', 'bank_transfer') }}' }" :class="{ 'overflow-hidden': mobileMenu }">
     <x-tracking-tags placement="body" />
 
     @php
@@ -57,9 +60,9 @@
     @endphp
     <x-ecommerce-datalayer :payload="$__mlBeginCheckout" />
 
-    @include('components.unified-navbar')
+    @include('components.site.header')
 
-    <main>
+    <main class="h-legacy">
         <section class="hero-section relative py-12 lg:py-16">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                 <nav class="mb-6 text-gray-600 text-sm flex flex-wrap items-center gap-1">
@@ -242,6 +245,6 @@
         </section>
     </main>
 
-    @include('components.unified-footer')
+    @include('components.site.footer')
 </body>
 </html>

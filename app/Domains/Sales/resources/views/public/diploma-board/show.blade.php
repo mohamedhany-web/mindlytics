@@ -9,16 +9,24 @@
     <meta property="og:description" content="{{ \Illuminate\Support\Str::limit(strip_tags($entry->summary ?? ''), 200) }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    {{-- هوية الموقع الموحّدة (docs/SITE_DESIGN.md) --}}
+    @include('components.site.styles')
+    @include('components.site.legacy-theme')
 </head>
-<body class="bg-gradient-to-br from-slate-50 via-emerald-50/30 to-sky-50 min-h-screen text-slate-900">
+<body class="h-site h-has-mobile-bar">
+    @include('components.site.header')
+    <div class="h-legacy">
+    @include('components.site.page-head', [
+        'eyebrow' => 'دبلومة',
+        'title' => $entry->name,
+        'subtitle' => filled($entry->summary) ? $entry->summary : null,
+        'crumbs' => [['label' => 'الدفعات القادمة', 'url' => route('home').'#intakes'], ['label' => $entry->name]],
+    ])
     <div class="max-w-3xl mx-auto px-4 py-8 sm:py-12">
-        <header class="text-center mb-8">
-            <p class="text-sm font-semibold text-emerald-700 tracking-wide uppercase mb-2">Mindlytics Academy — توصيف دبلومة</p>
-            <h1 class="text-3xl sm:text-4xl font-black text-slate-900">{{ $entry->name }}</h1>
-            @if(filled($entry->summary))
-                <p class="text-slate-600 mt-3 text-lg leading-relaxed">{{ $entry->summary }}</p>
-            @endif
-        </header>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px">
+            <a href="{{ route('home') }}#consult" class="h-btn h-btn-primary h-btn-lg">احجز مقعدك</a>
+            <a href="{{ route('public.contact') }}?subject={{ urlencode('استفسار عن دبلومة: '.$entry->name) }}" class="h-btn h-btn-outline h-btn-lg">اسأل فريق القبول</a>
+        </div>
 
         <div class="bg-white rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden">
             <div class="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-100">
@@ -130,5 +138,7 @@
             <p>Mindlytics Academy — للاستفسار تواصل مع فريق المبيعات</p>
         </footer>
     </div>
+    </div>
+    @include('components.site.footer')
 </body>
 </html>

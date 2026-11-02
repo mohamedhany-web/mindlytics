@@ -305,9 +305,12 @@
                 }
             }
         </style>
-    </head>
+        {{-- هوية الموقع الموحّدة (docs/SITE_DESIGN.md) --}}
+    @include('components.site.styles')
+    @include('components.site.legacy-theme')
+</head>
 
-<body class="bg-gray-50 text-gray-900"
+<body class="h-site h-has-mobile-bar"
       x-data="{ mobileMenu: false }"
       :class="{ 'overflow-hidden': mobileMenu }">
     <x-tracking-tags placement="body" />
@@ -315,9 +318,9 @@
         <x-ecommerce-datalayer :payload="session('analytics_purchase')" />
     @endif
 
-    @include('components.unified-navbar')
+    @include('components.site.header')
     
-    <main class="pt-0 mt-0">
+    <main class="h-legacy pt-0 mt-0">
     
     <!-- Hero Section -->
     <section class="hero-section relative overflow-hidden min-h-[60vh] flex items-center pt-16 lg:pt-20">
@@ -819,7 +822,7 @@
     </main>
     
     <!-- Unified Footer -->
-    @include('components.unified-footer')
+    @include('components.site.footer')
     
 </body>
 </html>

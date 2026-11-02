@@ -1229,14 +1229,17 @@
                 }
             }
         </style>
-    </head>
+        {{-- هوية الموقع الموحّدة (docs/SITE_DESIGN.md) --}}
+    @include('components.site.styles')
+    @include('components.site.legacy-theme')
+</head>
 
-<body class="bg-gray-50 text-gray-900"
+<body class="h-site h-has-mobile-bar"
       x-data="{ mobileMenu: false, searchQuery: '' }"
       :class="{ 'overflow-hidden': mobileMenu }">
     <x-tracking-tags placement="body" />
 
-    @include('components.unified-navbar')
+    @include('components.site.header')
 
     @php
         $courseContact = $platformContact ?? \App\Support\PlatformSettings::contactPage();
@@ -1292,7 +1295,7 @@
     @endphp
     <x-ecommerce-datalayer :payload="$__mlViewItem" />
     
-    <main class="pt-0 mt-0">
+    <main class="h-legacy pt-0 mt-0">
     {{-- رسائل النجاح / المعلومات / الأخطاء بعد إتمام الطلب أو أي إجراء --}}
     @if(session('success') && !session('payment_success_modal'))
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 lg:pt-24 pb-2" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 8000)">
@@ -2295,7 +2298,7 @@
     @endif
     
     <!-- Unified Footer -->
-    @include('components.unified-footer')
+    @include('components.site.footer')
 
     <!-- Dynamic JavaScript -->
     <script>

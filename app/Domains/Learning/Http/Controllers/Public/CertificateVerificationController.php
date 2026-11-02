@@ -15,7 +15,8 @@ class CertificateVerificationController extends Controller
         if ($verificationCode === '') {
             return view('learning::public.certificates.verify', [
                 'certificate' => null,
-                'error' => 'الرجاء إدخال الرقم التسلسلي أو رمز التحقق',
+                // أول فتح للصفحة من غير بحث: مفيش رسالة خطأ
+                'error' => $request->has('code') ? 'الرجاء إدخال الرقم التسلسلي أو رمز التحقق' : null,
             ]);
         }
 
