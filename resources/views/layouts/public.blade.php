@@ -31,17 +31,6 @@
     @include('components.favicon-meta')
     <x-tracking-tags placement="head" />
 
-    <!-- الخطوط العربية - تحميل غير معطل للرسم (تحسين FCP/LCP) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Tajawal:wght@400;500;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Tajawal:wght@400;500;700;800&display=swap"></noscript>
-    
-    <!-- Resource Hints للأداء -->
-    <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
-    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
-    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
-    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -52,62 +41,24 @@
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
 
-    <!-- Custom Styles from welcome.blade.php -->
+    <!-- أنماط قديمة لبعض الصفحات، وبعدها هوية الموقع وطبقة التوحيد (docs/SITE_DESIGN.md) -->
     @include('layouts.public-styles')
+    @include('components.site.styles')
+    @include('components.site.legacy-theme')
     @stack('styles')
 </head>
 
-<body class="bg-gray-50 text-gray-900"
-      x-data="{ mobileMenu: false, searchQuery: '' }"
-      :class="{ 'overflow-hidden': mobileMenu }">
+<body class="h-site h-has-mobile-bar">
     <x-tracking-tags placement="body" />
 
-    <!-- Navigation Header - نفس الناف بار من الصفحة الرئيسية -->
-    @include('components.unified-navbar')
+    @include('components.site.header')
 
-    <!-- Main Content -->
-    <main>
+    <main class="h-legacy">
         @yield('content')
     </main>
 
-    <!-- Footer - نفس فوتر الصفحة الرئيسية -->
-    @include('components.unified-footer')
+    @include('components.site.footer')
 
     @stack('scripts')
-
-    <script>
-        // تأثير الناف بار عند السكرول - محسّن للأداء
-        document.addEventListener('DOMContentLoaded', function() {
-            const navbar = document.getElementById('navbar');
-            if (navbar) {
-                let ticking = false;
-                let isScrolled = false;
-                
-                function handleScroll() {
-                    if (!ticking) {
-                        window.requestAnimationFrame(() => {
-                            const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
-                            const shouldBeScrolled = currentScroll > 100;
-                            
-                            if (shouldBeScrolled !== isScrolled) {
-                                if (shouldBeScrolled) {
-                                    navbar.classList.add('scrolled');
-                                } else {
-                                    navbar.classList.remove('scrolled');
-                                }
-                                isScrolled = shouldBeScrolled;
-                            }
-                            
-                            ticking = false;
-                        });
-                        ticking = true;
-                    }
-                }
-                
-                window.addEventListener('scroll', handleScroll, { passive: true });
-            }
-        });
-    </script>
 </body>
 </html>
-

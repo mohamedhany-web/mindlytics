@@ -43,6 +43,11 @@ class SystemSettingsController extends Controller
             'contact_phone' => ['nullable', 'string', 'max:60'],
             'contact_email' => ['nullable', 'email', 'max:255'],
             'contact_whatsapp' => ['nullable', 'string', 'max:30'],
+            'contact_facebook' => ['nullable', 'url', 'max:500'],
+            'contact_instagram' => ['nullable', 'url', 'max:500'],
+            'contact_linkedin' => ['nullable', 'url', 'max:500'],
+            'contact_youtube' => ['nullable', 'url', 'max:500'],
+            'contact_tiktok' => ['nullable', 'url', 'max:500'],
             'contact_hours' => ['nullable', 'array', 'max:7'],
             'contact_hours.*.label' => ['nullable', 'string', 'max:120'],
             'contact_hours.*.value' => ['nullable', 'string', 'max:120'],
@@ -101,6 +106,11 @@ class SystemSettingsController extends Controller
                 'email' => (string) ($validated['contact_email'] ?? ''),
                 'whatsapp' => preg_replace('/\D+/', '', (string) ($validated['contact_whatsapp'] ?? '')),
                 'hours' => PlatformSettings::normalizeContactHours($request->input('contact_hours', [])),
+                'facebook' => (string) ($validated['contact_facebook'] ?? ''),
+                'instagram' => (string) ($validated['contact_instagram'] ?? ''),
+                'linkedin' => (string) ($validated['contact_linkedin'] ?? ''),
+                'youtube' => (string) ($validated['contact_youtube'] ?? ''),
+                'tiktok' => (string) ($validated['contact_tiktok'] ?? ''),
             ],
         ]);
 

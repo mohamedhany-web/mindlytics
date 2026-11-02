@@ -230,6 +230,19 @@
                         </div>
                     </div>
                     <div>
+                        <label class="text-sm font-bold text-slate-800 mb-1 block">روابط السوشيال (تظهر في فوتر الموقع)</label>
+                        <p class="text-xs text-slate-500 mb-3">اترك الخانة فاضية لو مش عايز الأيقونة تظهر.</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            @foreach(['facebook' => 'Facebook', 'instagram' => 'Instagram', 'linkedin' => 'LinkedIn', 'youtube' => 'YouTube', 'tiktok' => 'TikTok'] as $key => $label)
+                                <div>
+                                    <label class="text-xs font-bold text-slate-600" for="contact_{{ $key }}">{{ $label }}</label>
+                                    <input type="url" id="contact_{{ $key }}" name="contact_{{ $key }}" value="{{ old('contact_'.$key, $contactPage[$key] ?? '') }}"
+                                           class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" dir="ltr" placeholder="https://">
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                    <div>
                         <label class="text-sm font-bold text-slate-800 mb-3 block">ساعات العمل</label>
                         <div class="space-y-3">
                             @foreach(array_slice($hoursRows, 0, 5) as $i => $row)
