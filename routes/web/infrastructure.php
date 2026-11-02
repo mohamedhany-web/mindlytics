@@ -106,3 +106,24 @@ Route::get('/images/student-portal/{asset}', function (string $asset) {
         'Cache-Control' => 'public, max-age=31536000, immutable',
     ]);
 })->where('asset', '[A-Za-z0-9._-]+')->name('student-portal.asset')->middleware('web');
+
+/*
+|--------------------------------------------------------------------------
+| Site photos (homepage hero, about, auth pages)
+| Serves from public/images/home when the host's public_html does not have them.
+|--------------------------------------------------------------------------
+*/
+Route::get('/images/home/{asset}', function (string $asset) {
+    $filePath = public_path('images/home/'.basename($asset));
+    if (! @is_file($filePath) || ! @is_readable($filePath)) {
+        abort(404, 'Site image not found');
+    }
+
+    $mimeTypes = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'avif' => 'image/avif', 'svg' => 'image/svg+xml'];
+    $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+
+    return response()->file($filePath, [
+        'Content-Type' => $mimeTypes[$extension] ?? 'application/octet-stream',
+        'Cache-Control' => 'public, max-age=31536000, immutable',
+    ]);
+})->where('asset', '[A-Za-z0-9_-]+\.(jpg|jpeg|png|webp|avif|svg)')->name('site.image')->middleware('web');

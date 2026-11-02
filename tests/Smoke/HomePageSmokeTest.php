@@ -125,4 +125,12 @@ class HomePageSmokeTest extends SmokeTestCase
         }
         $this->assertTrue(true);
     }
+
+    /** على الاستضافة public_html ممكن ما يكونش فيها public/images/home، فالصورة بتتعرض من Laravel. */
+    public function test_site_photo_is_served_through_the_fallback_route(): void
+    {
+        $this->get(route('site.image', 'classroom-900.jpg'))->assertOk()->assertHeader('Content-Type', 'image/jpeg');
+        $this->get('/images/home/missing.jpg')->assertNotFound();
+        $this->get('/images/home/..%2F..%2F.env')->assertNotFound();
+    }
 }
