@@ -35,6 +35,24 @@ class HomePageSmokeTest extends SmokeTestCase
         $this->assertLessThan(strpos($html, 'Smoke Python Course'), strpos($html, 'Smoke Data Diploma'));
     }
 
+    public function test_course_with_a_start_date_is_ordered_by_date_and_admin_can_set_it(): void
+    {
+        SalesDiplomaBoardEntry::query()->update(['is_active' => false]);
+        SalesCourseBoardEntry::query()->update(['is_active' => false]);
+        SalesDiplomaBoardEntry::create(['name' => 'Smoke Late Diploma', 'starts_at' => now()->addDays(40)->toDateString(), 'is_active' => true, 'landing_published' => false]);
+        $course = SalesCourseBoardEntry::create(['name' => 'Smoke Early Course', 'is_active' => true, 'landing_published' => false]);
+
+        $admin = \App\Models\User::where('role', 'super_admin')->where('is_active', true)->firstOrFail();
+        $this->actingAs($admin)->put(route('admin.sales-course-board.update', $course), [
+            'name' => 'Smoke Early Course', 'starts_at' => now()->addDays(5)->toDateString(), 'is_active' => '1', 'sort_order' => 0,
+        ])->assertRedirect();
+        $this->assertSame(now()->addDays(5)->toDateString(), $course->fresh()->starts_at?->toDateString());
+
+        auth()->logout();
+        $html = $this->get('/?lang=ar')->assertOk()->getContent();
+        $this->assertLessThan(strpos($html, 'Smoke Late Diploma'), strpos($html, 'Smoke Early Course'));
+    }
+
     public function test_homepage_without_board_data_still_renders(): void
     {
         SalesDiplomaBoardEntry::query()->update(['is_active' => false]);

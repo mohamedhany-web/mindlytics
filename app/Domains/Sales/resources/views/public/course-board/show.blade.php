@@ -120,7 +120,7 @@
     $metaChips = array_values(array_filter([
         filled($entry->format) && $entry->format !== '—' ? ['label' => $entry->format, 'icon' => 'fas fa-laptop', 'tone' => 'blue'] : null,
         filled($entry->audience) ? ['label' => $entry->audience, 'icon' => 'fas fa-users', 'tone' => 'green'] : null,
-        filled($entry->start_label) && $entry->start_label !== '—' ? ['label' => 'البداية: '.$entry->start_label, 'icon' => 'fas fa-calendar-day', 'tone' => 'violet'] : null,
+        filled($entry->startDisplay()) ? ['label' => 'البداية: '.$entry->startDisplay(), 'icon' => 'fas fa-calendar-day', 'tone' => 'violet'] : null,
     ]));
 
     $detailRows = array_values(array_filter([
@@ -222,7 +222,7 @@
                         @foreach([
                             ['fa-users', 'الفئة المستهدفة', $entry->audience],
                             ['fa-laptop', 'نظام الحضور', $entry->format],
-                            ['fa-calendar-day', 'موعد البداية', $entry->start_label],
+                            ['fa-calendar-day', 'موعد البداية', $entry->startDisplay()],
                         ] as [$icon, $label, $value])
                             @if(filled($value) && $value !== '—')
                                 <li>

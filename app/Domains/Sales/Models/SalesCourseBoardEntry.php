@@ -16,6 +16,7 @@ class SalesCourseBoardEntry extends Model
         'audience',
         'instructor_name',
         'start_label',
+        'starts_at',
         'schedule_days',
         'duration',
         'hours',
@@ -34,6 +35,7 @@ class SalesCourseBoardEntry extends Model
     protected function casts(): array
     {
         return [
+            'starts_at' => 'date',
             'price_online' => 'decimal:2',
             'price_recorded' => 'decimal:2',
             'highlights' => 'array',
@@ -89,6 +91,16 @@ class SalesCourseBoardEntry extends Model
         return $query->orderBy('sort_order')->orderBy('name');
     }
 
+    /** تاريخ البداية لو موجود، وإلا موعد البداية النصي. */
+    public function startDisplay(): ?string
+    {
+        if ($this->starts_at) {
+            return $this->starts_at->format('Y-m-d');
+        }
+
+        return filled($this->start_label) && $this->start_label !== '—' ? (string) $this->start_label : null;
+    }
+
     public function landingUrl(): ?string
     {
         if (! $this->landing_published || blank($this->slug)) {
@@ -131,8 +143,8 @@ class SalesCourseBoardEntry extends Model
         if (filled($this->audience)) {
             $auto[] = 'الفئة المستهدفة: '.$this->audience;
         }
-        if (filled($this->start_label) && $this->start_label !== '—') {
-            $auto[] = 'موعد البداية: '.$this->start_label;
+        if (filled($this->startDisplay())) {
+            $auto[] = 'موعد البداية: '.$this->startDisplay();
         }
         if (filled($this->schedule_days) && $this->schedule_days !== '—') {
             $auto[] = 'أيام المحاضرات: '.$this->schedule_days;

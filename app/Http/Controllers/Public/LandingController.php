@@ -108,7 +108,7 @@ class LandingController extends Controller
 
     /**
      * الدفعات القادمة على الصفحة الرئيسية: من لوحة معلومات الدبلومات والكورسات (إدارة المبيعات).
-     * الأقرب ميعاداً أولاً، واللي من غير تاريخ في الآخر.
+     * الأقرب ميعاداً أولاً (دبلومات وكورسات)، واللي من غير تاريخ في الآخر.
      *
      * @return Collection<int, array{kind: string, type: string, name: string, start: ?string, days: ?string, mode: string, mode_key: string, price: ?string, url: ?string}>
      */
@@ -140,11 +140,9 @@ class LandingController extends Controller
         $courses = SalesCourseBoardEntry::query()->active()->ordered()->limit(12)->get()
             ->map(function (SalesCourseBoardEntry $e) use ($mode, $price) {
                 [$key, $label] = $mode($e->format);
-                $start = filled($e->start_label) && $e->start_label !== '—' ? (string) $e->start_label : null;
-
                 return [
                     'kind' => 'course', 'type' => 'كورس', 'name' => (string) $e->name,
-                    'start' => $start, 'sort' => PHP_INT_MAX - 1,
+                    'start' => $e->startDisplay(), 'sort' => $e->starts_at?->timestamp ?? PHP_INT_MAX - 1,
                     'days' => filled($e->schedule_days) ? (string) $e->schedule_days : null,
                     'mode' => $label, 'mode_key' => $key, 'price' => $price($e->price_online), 'url' => $e->landingUrl(),
                 ];

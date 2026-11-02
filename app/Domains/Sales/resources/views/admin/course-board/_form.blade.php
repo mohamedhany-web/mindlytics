@@ -26,7 +26,13 @@
                class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
     </div>
     <div>
-        <label class="block text-xs font-semibold text-slate-500 mb-1">موعد البداية</label>
+        <label class="block text-xs font-semibold text-slate-500 mb-1">تاريخ بداية الدفعة</label>
+        <input type="date" name="starts_at" value="{{ old('starts_at', optional($entry->starts_at)->format('Y-m-d')) }}"
+               class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+        <p class="text-[11px] text-slate-500 mt-1">بيرتّب الدفعات القادمة في الصفحة الرئيسية بالأقرب.</p>
+    </div>
+    <div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1">موعد البداية (نص بديل)</label>
         <input type="text" name="start_label" value="{{ old('start_label', $entry->start_label) }}"
                class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm" placeholder="Start of September / 1/10">
     </div>
