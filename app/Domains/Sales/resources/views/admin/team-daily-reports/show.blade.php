@@ -1,10 +1,10 @@
-@extends('layouts.admin')
+@extends('sales::crm.admin')
 
 @section('title', 'تقرير فريق')
 @section('header', 'تقرير فريق — '.$report->team->name)
 
 @section('content')
-<div class="max-w-3xl space-y-6">
+<div class="max-w-3xl mx-auto space-y-6">
     <div class="bg-white rounded-xl border p-6">
         <p class="text-sm text-gray-500">التاريخ: {{ $report->report_date?->format('Y-m-d') }} · المدير: {{ $report->manager->name ?? '—' }}</p>
         <div class="grid grid-cols-3 gap-4 mt-4 text-sm">

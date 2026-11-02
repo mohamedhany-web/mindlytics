@@ -1,90 +1,68 @@
-@extends('layouts.admin')
+@extends('sales::crm.admin')
 @section('title', 'جدول يوم السيلز (Blocks)')
 @section('header', 'جدول يوم السيلز — Blocks')
+@use('App\Domains\Sales\Models\SalesDayBlock')
 @section('content')
-<div class="w-full space-y-6">
-    <div class="rounded-3xl bg-white/95 border border-slate-200 shadow-lg overflow-hidden">
-        <div class="px-5 py-6 sm:px-8 border-b border-slate-200">
-            <h1 class="text-2xl font-bold text-slate-900">جدول الإنتاجية اليومي</h1>
-            <p class="text-slate-500 mt-1">Blocks تظهر لموظفي السيلز ومديريهم — Call / Follow-up / Closing / Report.</p>
-        </div>
-        <div class="p-5 sm:p-8 space-y-6">
-            @if(session('success'))
-                <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800">{{ session('success') }}</div>
-            @endif
-            @if($errors->any())
-                <div class="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-sm">
-                    <ul class="list-disc list-inside">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
-                </div>
-            @endif
-
-            <form method="post" action="{{ route('admin.sales.day-blocks.store') }}" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 p-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50">
-                @csrf
-                <input type="text" name="name" placeholder="اسم البلوك" required class="rounded-xl border-slate-200 text-sm">
-                <input type="text" name="code" placeholder="code (call_block_1)" required class="rounded-xl border-slate-200 text-sm">
-                <input type="time" name="start_time" required class="rounded-xl border-slate-200 text-sm">
-                <input type="time" name="end_time" required class="rounded-xl border-slate-200 text-sm">
-                <select name="activity_type" required class="rounded-xl border-slate-200 text-sm">
-                    @foreach(\App\Domains\Sales\Models\SalesDayBlock::ACTIVITY_TYPES as $k => $label)
-                        <option value="{{ $k }}">{{ $label }}</option>
-                    @endforeach
-                </select>
-                <input type="text" name="goal_text" placeholder="هدف البلوك" class="rounded-xl border-slate-200 text-sm md:col-span-2">
-                <input type="number" name="sort_order" value="100" class="rounded-xl border-slate-200 text-sm" placeholder="ترتيب">
-                <label class="inline-flex items-center gap-2 text-sm"><input type="checkbox" name="is_active" value="1" checked class="rounded"> نشط</label>
-                <button type="submit" class="rounded-xl bg-sky-600 text-white font-bold text-sm px-4 py-2">إضافة بلوك</button>
-            </form>
-
-            <div class="space-y-3">
-                @forelse($blocks as $block)
-                    <div class="rounded-2xl border border-slate-200 bg-white p-4">
-                        <form method="post" action="{{ route('admin.sales.day-blocks.update', $block) }}" class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-end">
-                            @csrf
-                            @method('PUT')
-                            <div class="lg:col-span-1">
-                                <label class="block text-[11px] font-semibold text-slate-500 mb-1">ترتيب</label>
-                                <input type="number" name="sort_order" value="{{ $block->sort_order }}" class="w-full rounded-lg border-slate-200 text-sm">
-                            </div>
-                            <div class="lg:col-span-2">
-                                <label class="block text-[11px] font-semibold text-slate-500 mb-1">الاسم / code</label>
-                                <input type="text" name="name" value="{{ $block->name }}" class="w-full rounded-lg border-slate-200 text-sm font-semibold">
-                                <input type="text" name="code" value="{{ $block->code }}" class="w-full rounded-lg border-slate-200 text-xs mt-1">
-                            </div>
-                            <div class="lg:col-span-2">
-                                <label class="block text-[11px] font-semibold text-slate-500 mb-1">من — إلى</label>
-                                <div class="flex gap-1">
-                                    <input type="time" name="start_time" value="{{ $block->startTimeHm() }}" class="w-full rounded-lg border-slate-200 text-sm">
-                                    <input type="time" name="end_time" value="{{ $block->endTimeHm() }}" class="w-full rounded-lg border-slate-200 text-sm">
-                                </div>
-                            </div>
-                            <div class="lg:col-span-2">
-                                <label class="block text-[11px] font-semibold text-slate-500 mb-1">النوع</label>
-                                <select name="activity_type" class="w-full rounded-lg border-slate-200 text-sm">
-                                    @foreach(\App\Domains\Sales\Models\SalesDayBlock::ACTIVITY_TYPES as $k => $label)
-                                        <option value="{{ $k }}" @selected($block->activity_type === $k)>{{ $label }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="lg:col-span-3">
-                                <label class="block text-[11px] font-semibold text-slate-500 mb-1">الهدف</label>
-                                <input type="text" name="goal_text" value="{{ $block->goal_text }}" class="w-full rounded-lg border-slate-200 text-sm">
-                            </div>
-                            <div class="lg:col-span-2 flex flex-wrap items-center gap-2">
-                                <label class="text-xs inline-flex items-center gap-1"><input type="checkbox" name="is_active" value="1" @checked($block->is_active) class="rounded"> نشط</label>
-                                <button class="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-bold">حفظ</button>
-                            </div>
-                        </form>
-                        <form method="post" action="{{ route('admin.sales.day-blocks.destroy', $block) }}" onsubmit="return confirm('حذف البلوك؟');" class="mt-2">
-                            @csrf
-                            @method('DELETE')
-                            <button class="px-3 py-1.5 rounded-lg text-rose-600 text-xs font-bold hover:bg-rose-50">حذف</button>
-                        </form>
-                    </div>
-                @empty
-                    <p class="text-sm text-slate-500 text-center py-8">لا توجد بلوكات بعد — أضف من النموذج أعلاه أو شغّل الـ migration.</p>
-                @endforelse
-            </div>
-        </div>
+<div style="display: flex; flex-direction: column; gap: 14px">
+    <div>
+        <h1 class="crm-title">جدول الإنتاجية اليومي</h1>
+        <p class="crm-muted" style="margin: 4px 0 0; font-size: 12px">البلوكات بتظهر لموظفي المبيعات ومديريهم: مكالمات، متابعات، إغلاق، تقرير.</p>
     </div>
+
+    <form method="post" action="{{ route('admin.sales.day-blocks.store') }}" class="crm-card">
+        @csrf
+        <div class="crm-dashlet-head"><i class="fas fa-plus"></i><h2>إضافة بلوك</h2></div>
+        <div style="padding: 14px; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; align-items: end">
+            <label class="crm-label">اسم البلوك *<input class="crm-input" type="text" name="name" required></label>
+            <label class="crm-label">الكود *<input class="crm-input" type="text" name="code" required placeholder="call_block_1" dir="ltr"></label>
+            <label class="crm-label">من *<input class="crm-input" type="time" name="start_time" required></label>
+            <label class="crm-label">إلى *<input class="crm-input" type="time" name="end_time" required></label>
+            <label class="crm-label">النوع *
+                <select class="crm-select" name="activity_type" required>
+                    @foreach(SalesDayBlock::ACTIVITY_TYPES as $k => $label)<option value="{{ $k }}">{{ $label }}</option>@endforeach
+                </select>
+            </label>
+            <label class="crm-label" style="grid-column: span 2">الهدف<input class="crm-input" type="text" name="goal_text"></label>
+            <label class="crm-label">الترتيب<input class="crm-input" type="number" name="sort_order" value="100"></label>
+            <label style="display: inline-flex; align-items: center; gap: 6px; height: 38px; font-size: 13px"><input type="checkbox" name="is_active" value="1" checked> نشط</label>
+            <div><button type="submit" class="crm-btn crm-btn-primary"><i class="fas fa-plus"></i> إضافة بلوك</button></div>
+        </div>
+    </form>
+
+    <section class="crm-card">
+        <div class="crm-toolbar"><span style="flex: 1; font-size: 13px; font-weight: 700">البلوكات ({{ $blocks->count() }})</span></div>
+        <div style="overflow-x: auto">
+            <table class="crm-table" style="min-width: 1000px">
+                <thead><tr><th style="width: 80px">الترتيب</th><th>الاسم</th><th>الكود</th><th style="width: 120px">من</th><th style="width: 120px">إلى</th><th style="width: 150px">النوع</th><th>الهدف</th><th style="width: 60px">نشط</th><th style="width: 130px"></th></tr></thead>
+                <tbody>
+                    @forelse($blocks as $block)
+                        @php($f = 'block-'.$block->id)
+                        <tr>
+                            <td><input form="{{ $f }}" class="crm-input" style="width: 100%" type="number" name="sort_order" value="{{ $block->sort_order }}" aria-label="الترتيب"></td>
+                            <td><input form="{{ $f }}" class="crm-input" style="width: 100%; font-weight: 700" type="text" name="name" value="{{ $block->name }}" aria-label="الاسم"></td>
+                            <td><input form="{{ $f }}" class="crm-input" style="width: 100%" type="text" name="code" value="{{ $block->code }}" dir="ltr" aria-label="الكود"></td>
+                            <td><input form="{{ $f }}" class="crm-input" style="width: 100%" type="time" name="start_time" value="{{ $block->startTimeHm() }}" aria-label="من"></td>
+                            <td><input form="{{ $f }}" class="crm-input" style="width: 100%" type="time" name="end_time" value="{{ $block->endTimeHm() }}" aria-label="إلى"></td>
+                            <td>
+                                <select form="{{ $f }}" class="crm-select" style="width: 100%" name="activity_type" aria-label="النوع">
+                                    @foreach(SalesDayBlock::ACTIVITY_TYPES as $k => $label)<option value="{{ $k }}" @selected($block->activity_type === $k)>{{ $label }}</option>@endforeach
+                                </select>
+                            </td>
+                            <td><input form="{{ $f }}" class="crm-input" style="width: 100%" type="text" name="goal_text" value="{{ $block->goal_text }}" aria-label="الهدف"></td>
+                            <td style="text-align: center"><input form="{{ $f }}" type="checkbox" name="is_active" value="1" @checked($block->is_active) aria-label="نشط"></td>
+                            <td>
+                                <div style="display: flex; gap: 6px; justify-content: flex-end">
+                                    <form id="{{ $f }}" method="post" action="{{ route('admin.sales.day-blocks.update', $block) }}">@csrf @method('PUT')<button type="submit" class="crm-btn crm-btn-sm crm-btn-dark">حفظ</button></form>
+                                    <form method="post" action="{{ route('admin.sales.day-blocks.destroy', $block) }}" onsubmit="return confirm('حذف البلوك؟');">@csrf @method('DELETE')<button type="submit" class="crm-btn crm-btn-sm crm-btn-outline" style="color: var(--crm-bad)">حذف</button></form>
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="9" class="crm-muted" style="text-align: center; padding: 24px">مفيش بلوكات لسه. ضيف من الفورم اللي فوق.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </section>
 </div>
 @endsection

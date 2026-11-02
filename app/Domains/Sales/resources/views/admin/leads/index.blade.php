@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.admin')
 
 @section('title', 'العملاء المحتملون — المبيعات')
 @section('header', 'المبيعات — العملاء المحتملون')
@@ -26,11 +26,6 @@
 @endphp
 
 <div class="space-y-6">
-    @if(session('success'))
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm font-semibold">
-            <i class="fas fa-check-circle ml-1"></i>{{ session('success') }}
-        </div>
-    @endif
     @if(!empty(session('import_errors')))
         <div class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 max-h-48 overflow-y-auto space-y-1">
             <p class="font-bold"><i class="fas fa-exclamation-triangle ml-1"></i> تفاصيل التخطي ({{ count(session('import_errors')) }})</p>

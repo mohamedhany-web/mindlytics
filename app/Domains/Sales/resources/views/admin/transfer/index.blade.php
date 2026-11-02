@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.admin')
 
 @section('title', 'تحويل بيانات موظف — المبيعات')
 @section('header', 'المبيعات — تحويل بيانات موظف')
@@ -22,16 +22,6 @@
     scope: @js(old('scope', $scope)),
     groupId: @js((string) old('group_id', $groupId ?? '')),
 }">
-    @if(session('success'))
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm font-semibold">
-            <i class="fas fa-check-circle ml-1"></i>{{ session('success') }}
-        </div>
-    @endif
-    @if(session('error'))
-        <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm font-semibold">
-            <i class="fas fa-exclamation-circle ml-1"></i>{{ session('error') }}
-        </div>
-    @endif
 
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
         <div class="px-4 py-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

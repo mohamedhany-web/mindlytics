@@ -133,4 +133,18 @@ final class CrmNavigation
             array_filter($candidates, fn ($c) => Route::has($c[1]))
         ));
     }
+
+    /** التاب اللي يتعلّم عليه لصفحات إدارة المبيعات (admin.sales.*) لما تتعرض بإطار CRM. */
+    public static function moduleForAdminRoute(?string $name): string
+    {
+        $section = explode('.', (string) preg_replace('/^admin\.sales\./', '', (string) $name))[0];
+
+        return match ($section) {
+            'leads', 'groups', 'categories', 'interest-types', 'distribution', 'transfer' => 'leads',
+            'win-approvals', 'commissions', 'course-commission' => 'deals',
+            'schedule-calendar', 'shifts', 'day-blocks' => 'calendar',
+            'reports', 'kpi', 'daily-reports', 'team-daily-reports', 'insights', 'crm-compliance' => 'reports',
+            default => 'more',
+        };
+    }
 }

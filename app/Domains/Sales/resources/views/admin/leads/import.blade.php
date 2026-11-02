@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.admin')
 
 @section('title', 'استيراد عملاء')
 @section('header', 'المبيعات — استيراد دفعة عملاء')
@@ -41,21 +41,6 @@
 @endphp
 
 <div class="space-y-6" x-data="salesLeadImportPage">
-    @if(session('error'))
-        <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm font-semibold">
-            <i class="fas fa-exclamation-circle ml-1"></i>{{ session('error') }}
-        </div>
-    @endif
-    @if($errors->any())
-        <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm">
-            <p class="font-semibold mb-1"><i class="fas fa-exclamation-circle ml-1"></i> يوجد أخطاء:</p>
-            <ul class="list-disc list-inside space-y-0.5">
-                @foreach($errors->all() as $e)
-                    <li>{{ $e }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
 
     {{-- الهيدر --}}
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">

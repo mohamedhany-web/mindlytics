@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.admin')
 
 @section('title', 'عميل محتمل جديد')
 @section('header', 'إضافة عميل محتمل')
@@ -23,16 +23,6 @@
         </div>
     </section>
 
-    @if($errors->any())
-        <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm">
-            <p class="font-semibold mb-1"><i class="fas fa-exclamation-circle ml-1"></i> يوجد أخطاء في النموذج:</p>
-            <ul class="list-disc list-inside space-y-0.5">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
 
     @if($salesReps->isEmpty())
         <section class="rounded-2xl bg-white border border-amber-200 shadow-lg overflow-hidden">

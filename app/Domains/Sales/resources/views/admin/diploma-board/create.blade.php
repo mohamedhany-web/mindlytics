@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.admin')
 
 @section('title', 'إضافة توصيف دبلومة')
 @section('header', 'توصيف دبلومة جديدة')
@@ -12,15 +12,6 @@
             <p class="text-slate-500 text-sm mt-1">نفس بيانات توصيف الكورس + تاريخ البداية وطرق الحجز والمحاضرات المجانية</p>
         </div>
 
-        @if($errors->any())
-            <div class="mb-4 p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-sm">
-                <ul class="list-disc pr-5 space-y-1">
-                    @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
 
         <form method="POST" action="{{ route('admin.sales-diploma-board.store') }}" class="space-y-4">
             @csrf

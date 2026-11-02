@@ -1,25 +1,10 @@
-@extends('layouts.admin')
+@extends('sales::crm.admin')
 
 @section('title', 'فريق مبيعات جديد')
 @section('header', 'المبيعات — فريق جديد')
 
 @section('content')
-<div class="max-w-3xl space-y-6">
-    @if(session('error'))
-        <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm font-semibold">
-            <i class="fas fa-exclamation-circle ml-1"></i>{{ session('error') }}
-        </div>
-    @endif
-    @if($errors->any())
-        <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm">
-            <p class="font-semibold mb-1"><i class="fas fa-exclamation-circle ml-1"></i> يوجد أخطاء:</p>
-            <ul class="list-disc list-inside space-y-0.5">
-                @foreach($errors->all() as $e)
-                    <li>{{ $e }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+<div class="max-w-3xl mx-auto space-y-6">
 
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
         <div class="px-4 py-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

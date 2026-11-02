@@ -1,15 +1,10 @@
-@extends('layouts.admin')
+@extends('sales::crm.admin')
 
 @section('title', 'هيكل قسم المبيعات')
 @section('header', 'قسم المبيعات — الهرم الوظيفي')
 
 @section('content')
 <div class="space-y-8">
-    @if(session('success'))
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm font-semibold">
-            <i class="fas fa-check-circle ml-1"></i>{{ session('success') }}
-        </div>
-    @endif
 
     <section class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
         <p class="font-bold mb-1"><i class="fas fa-info-circle ml-1"></i> ربط الوظائف بالهرم</p>

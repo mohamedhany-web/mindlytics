@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.admin')
 
 @section('title', 'رحلة العميل — ' . ($lead->name ?: '#'.$lead->id))
 @section('header', 'خط زمني للعميل في الـ Pipeline')

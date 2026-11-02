@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.admin')
 
 @section('title', 'إعدادات التقرير اليومي')
 @section('header', 'إعدادات التقرير اليومي')
@@ -47,22 +47,7 @@
 @endphp
 
 <div class="space-y-6">
-    @if(session('success'))
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm font-semibold">
-            <i class="fas fa-check-circle ml-1"></i>{{ session('success') }}
-        </div>
-    @endif
 
-    @if($errors->any())
-        <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm">
-            <p class="font-semibold mb-1"><i class="fas fa-exclamation-circle ml-1"></i> يوجد أخطاء في النموذج:</p>
-            <ul class="list-disc list-inside space-y-0.5">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
 
     {{-- الهيدر + ملخص الإعدادات الحالية --}}
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">

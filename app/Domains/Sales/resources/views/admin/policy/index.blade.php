@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.admin')
 
 @section('title', 'قواعد فريق المبيعات')
 @section('header', 'المبيعات — قواعد السيلز')
@@ -6,9 +6,6 @@
 @section('content')
 @php $inputClass = 'w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500'; @endphp
 <div class="space-y-6">
-    @if(session('success'))
-        <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800">{{ session('success') }}</div>
-    @endif
 
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
         <div class="px-5 py-5 bg-gradient-to-l from-emerald-700 to-teal-700 text-white">

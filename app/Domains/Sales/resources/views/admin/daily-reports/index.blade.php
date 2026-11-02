@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.admin')
 
 @section('title', 'التقارير اليومية — المبيعات')
 @section('header', 'التقارير اليومية — المبيعات')
@@ -17,11 +17,6 @@
 @endphp
 
 <div class="space-y-6">
-    @if(session('success'))
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm font-semibold">
-            <i class="fas fa-check-circle ml-1"></i>{{ session('success') }}
-        </div>
-    @endif
     @if(!empty($penaltiesSynced))
         <div class="rounded-xl border border-amber-200 bg-amber-50 text-amber-900 px-4 py-3 text-sm">
             <i class="fas fa-gavel ml-1"></i>

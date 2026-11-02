@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.admin')
 
 @section('title', $rule->exists ? 'تعديل قاعدة' : 'قاعدة جديدة')
 @section('header', 'المبيعات — قواعد السيلز')

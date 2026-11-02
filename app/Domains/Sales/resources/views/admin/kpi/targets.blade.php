@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.admin')
 
 @section('title', 'أهداف KPIs المبيعات')
 @section('header', 'أهداف KPIs المبيعات')
@@ -90,23 +90,7 @@
         </div>
     </section>
 
-    @if(session('success'))
-        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900 text-sm font-semibold flex items-center gap-2">
-            <i class="fas fa-check-circle text-emerald-600"></i>
-            {{ session('success') }}
-        </div>
-    @endif
 
-    @if($errors->any())
-        <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-900 text-sm">
-            <p class="font-semibold mb-1 flex items-center gap-2"><i class="fas fa-exclamation-circle"></i> تحقق من البيانات</p>
-            <ul class="list-disc list-inside space-y-0.5 text-xs">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
 
     @if($salesReps->isEmpty())
         <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">

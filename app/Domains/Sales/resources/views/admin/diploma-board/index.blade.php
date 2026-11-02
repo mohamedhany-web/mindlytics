@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.admin')
 
 @section('title', 'توصيف الدبلومات')
 @section('header', 'توصيف الدبلومات')
@@ -19,9 +19,6 @@
         </div>
 
         <div class="p-5 sm:p-8 space-y-6">
-            @if(session('success'))
-                <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800">{{ session('success') }}</div>
-            @endif
 
             <form method="GET" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div class="sm:col-span-2">

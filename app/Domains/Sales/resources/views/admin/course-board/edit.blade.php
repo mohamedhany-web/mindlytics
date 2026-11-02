@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.admin')
 
 @section('title', 'تعديل '.$entry->name)
 @section('header', 'تعديل كورس المبيعات')
@@ -18,9 +18,6 @@
             @endif
         </div>
 
-        @if(session('success'))
-            <div class="mb-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800">{{ session('success') }}</div>
-        @endif
 
         <form method="POST" action="{{ route('admin.sales-course-board.update', $entry) }}" class="space-y-4">
             @csrf

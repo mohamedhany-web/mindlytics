@@ -175,12 +175,16 @@
         @if(session('error'))
             <div class="crm-alert crm-alert-err" role="alert" style="margin-bottom: 12px"><i class="fas fa-circle-exclamation"></i> {{ session('error') }}</div>
         @endif
+        @if(session('warning'))
+            <div class="crm-alert" role="status" style="margin-bottom: 12px; background: #FFF6E5; border-color: #F1D49A; color: #6B4100"><i class="fas fa-triangle-exclamation"></i> {{ session('warning') }}</div>
+        @endif
         @if($errors->any())
             <div class="crm-alert crm-alert-err" role="alert" style="margin-bottom: 12px">
                 @foreach($errors->all() as $err)<div>{{ $err }}</div>@endforeach
             </div>
         @endif
-        @yield('content')
+        @yield('crm_page_head')
+        <div class="crm-content">@yield('content')</div>
     </main>
 
     @stack('scripts')

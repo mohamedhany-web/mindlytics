@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.admin')
 
 @section('title', 'شيفتات وقنوات المبيعات')
 @section('header', 'شيفتات وقنوات المبيعات')
@@ -13,18 +13,6 @@
 <div class="space-y-6"
      x-data="shiftSegmentEditor()"
      @edit-shift-segment.window="openEdit($event.detail)">
-    @if(session('success'))
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm">{{ session('success') }}</div>
-    @endif
-    @if($errors->any())
-        <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm">
-            <ul class="list-disc pe-5 space-y-1">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
 
     @if(! $plan)
         <section class="rounded-2xl bg-white border border-slate-200 shadow-lg p-8 text-center">

@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.admin')
 
 @section('title', 'تعديل '.$entry->name)
 @section('header', 'تعديل توصيف الدبلومة')
@@ -22,19 +22,7 @@
             @endif
         </div>
 
-        @if(session('success'))
-            <div class="mb-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800">{{ session('success') }}</div>
-        @endif
 
-        @if($errors->any())
-            <div class="mb-4 p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-sm">
-                <ul class="list-disc pr-5 space-y-1">
-                    @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
 
         <form method="POST" action="{{ route('admin.sales-diploma-board.update', $entry) }}" class="space-y-4">
             @csrf

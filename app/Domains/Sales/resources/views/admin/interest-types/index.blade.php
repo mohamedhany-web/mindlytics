@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.admin')
 
 @section('title', 'أنواع اهتمام العملاء')
 @section('header', 'المبيعات — أنواع الاهتمام')
