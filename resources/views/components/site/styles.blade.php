@@ -1,22 +1,31 @@
-{{-- ستايل الصفحة الرئيسية الجديدة (docs/HOMEPAGE.md): ألوان البراند، بدون مكتبات CSS خارجية. --}}
+{{-- هوية الموقع العام (docs/SITE_DESIGN.md): الألوان والخطوط والأزرار والهيدر والفوتر. مشتركة بين الرئيسية وكل الصفحات العامة وصفحات الدخول. --}}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@600;700&display=swap">
 <style>
     :root {
         --h-ink: #17142A; --h-ink-2: #231D36; --h-brand: #3F3356; --h-accent: #F2B630;
-        --h-mist: #F4F3F8; --h-line: #E3E1EA; --h-line-dark: #3A3550;
+        --h-mist: #F4F3F8; --h-line: #E3E1EA; --h-line-dark: #3A3550; --h-field: #C9C5D6;
         --h-text-2: #4A4560; --h-muted: #5B5670; --h-on-dark: #D9D6E4; --h-on-dark-2: #C9C5D6;
+        --h-good: #0E6B44; --h-bad: #B42318;
+        --h-font: 'IBM Plex Sans Arabic', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        --h-display: 'Noto Kufi Arabic', 'IBM Plex Sans Arabic', sans-serif;
     }
     *, *::before, *::after { box-sizing: border-box; }
+    /* بيغلب `* { font-family }` القديم في public-styles، من غير ما يلمس أيقونات Font Awesome */
+    .h-site :where(*:not(.fa, .fas, .far, .fab, .fa-solid, .fa-regular, .fa-brands)) { font-family: var(--h-font); }
+    .h-site :where(.h-kufi, .h-h1, .h-h2, .h-page-head h1) { font-family: var(--h-display); }
     html { scroll-behavior: smooth; }
-    body { margin: 0; background: #FFFFFF; color: var(--h-ink); font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif; font-size: 16px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
-    img { max-width: 100%; }
-    a { color: var(--h-brand); }
-    a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 3px solid var(--h-accent); outline-offset: 2px; }
+    body.h-site { margin: 0; background: #FFFFFF; color: var(--h-ink); font-family: var(--h-font); font-size: 16px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+    .h-site img { max-width: 100%; }
+    .h-site a:focus-visible, .h-site button:focus-visible, .h-site input:focus-visible, .h-site select:focus-visible, .h-site textarea:focus-visible, .h-site summary:focus-visible { outline: 3px solid var(--h-accent); outline-offset: 2px; }
     .h-wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
-    .h-kufi { font-family: 'Noto Kufi Arabic', 'IBM Plex Sans Arabic', sans-serif; }
+    .h-kufi { font-family: var(--h-display); }
     .h-eyebrow { display: block; font-size: 14px; font-weight: 600; color: var(--h-brand); margin-bottom: 8px; }
     .h-eyebrow-accent { color: var(--h-accent); }
-    .h-h2 { margin: 0; font-family: 'Noto Kufi Arabic', sans-serif; font-size: 32px; line-height: 1.45; font-weight: 700; }
-    .h-lead { margin: 12px 0 0; color: var(--h-text-2); font-size: 17px; max-width: 640px; }
+    .h-h1 { margin: 0; font-family: var(--h-display); font-size: 40px; line-height: 1.4; font-weight: 700; }
+    .h-h2 { margin: 0; font-family: var(--h-display); font-size: 32px; line-height: 1.45; font-weight: 700; }
+    .h-lead { margin: 12px 0 0; color: var(--h-text-2); font-size: 17px; max-width: 680px; }
     .h-section { padding: 88px 0; }
     .h-section-mist { background: var(--h-mist); border-top: 1px solid var(--h-line); border-bottom: 1px solid var(--h-line); }
     .h-section-dark { background: var(--h-ink); color: #FFFFFF; }
@@ -25,9 +34,11 @@
     .h-link:hover { color: var(--h-brand); text-decoration: underline; text-underline-offset: 4px; }
 
     /* أزرار */
-    .h-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 24px; font: inherit; font-weight: 600; font-size: 15px; text-decoration: none; border: 1px solid transparent; cursor: pointer; transition: background-color .15s, color .15s, border-color .15s; }
+    .h-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 24px; font: inherit; font-weight: 600; font-size: 15px; line-height: 1.3; text-decoration: none; border: 1px solid transparent; border-radius: 0; cursor: pointer; transition: background-color .15s, color .15s, border-color .15s; }
     .h-btn-primary { background: var(--h-brand); color: #FFFFFF; }
     .h-btn-primary:hover { background: var(--h-ink); color: #FFFFFF; }
+    .h-btn-dark { background: var(--h-ink); color: #FFFFFF; }
+    .h-btn-dark:hover { background: var(--h-brand); color: #FFFFFF; }
     .h-btn-accent { background: var(--h-accent); color: var(--h-ink); font-weight: 700; }
     .h-btn-accent:hover { background: #FFC94D; color: var(--h-ink); }
     .h-btn-outline { border-color: var(--h-brand); color: var(--h-brand); background: transparent; }
@@ -35,6 +46,15 @@
     .h-btn-ghost-light { border-color: #FFFFFF; color: #FFFFFF; background: transparent; }
     .h-btn-ghost-light:hover { background: #FFFFFF; color: var(--h-ink); }
     .h-btn-lg { min-height: 54px; padding: 0 30px; font-size: 16px; }
+    .h-btn-block { width: 100%; }
+
+    /* خانات */
+    .h-field { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; color: var(--h-ink); }
+    .h-field input, .h-field select, .h-field textarea, .h-input { height: 48px; border: 1px solid var(--h-field); border-radius: 0; background: #FFFFFF; font: inherit; font-size: 15px; font-weight: 400; color: var(--h-ink); padding: 0 12px; width: 100%; }
+    .h-field textarea { height: auto; min-height: 96px; padding: 10px 12px; resize: vertical; }
+    .h-field input:focus, .h-field select:focus, .h-field textarea:focus, .h-input:focus { outline: none; border-color: var(--h-brand); box-shadow: 0 0 0 3px rgba(63, 51, 86, .15); }
+    .h-field-hint { font-size: 13px; font-weight: 400; color: var(--h-muted); }
+    .h-field-error { font-size: 13px; font-weight: 600; color: var(--h-bad); }
 
     /* الشريط العلوي والهيدر */
     .h-topbar { background: var(--h-ink); color: var(--h-on-dark); font-size: 13px; }
@@ -45,18 +65,63 @@
     .h-header { position: sticky; top: 0; z-index: 40; background: #FFFFFF; border-bottom: 1px solid var(--h-line); }
     .h-header .h-wrap { display: flex; justify-content: space-between; align-items: center; gap: 16px; min-height: 76px; }
     .h-logo { display: flex; align-items: center; gap: 12px; color: var(--h-ink); text-decoration: none; }
-    .h-logo-mark { width: 40px; height: 40px; background: var(--h-brand); color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'Noto Kufi Arabic', sans-serif; font-weight: 700; font-size: 20px; }
+    .h-logo img { height: 42px; width: auto; display: block; }
+    .h-logo-mark { width: 40px; height: 40px; background: var(--h-brand); color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: var(--h-display); font-weight: 700; font-size: 20px; }
     .h-logo-text { display: flex; flex-direction: column; line-height: 1.25; }
-    .h-logo-text b { font-family: 'Noto Kufi Arabic', sans-serif; font-size: 19px; }
+    .h-logo-text b { font-family: var(--h-display); font-size: 19px; }
     .h-logo-text span { font-size: 12px; color: var(--h-muted); }
-    .h-nav { display: flex; gap: 28px; font-size: 15px; font-weight: 500; }
-    .h-nav a { color: var(--h-ink); text-decoration: none; }
-    .h-nav a:hover { color: var(--h-brand); text-decoration: underline; text-underline-offset: 6px; }
-    .h-menu-btn { display: none; width: 46px; height: 46px; border: 1px solid #C9C5D6; background: #FFFFFF; cursor: pointer; align-items: center; justify-content: center; padding: 0; }
-    .h-mobile-menu { display: none; border-top: 1px solid var(--h-line); background: #FFFFFF; }
-    .h-mobile-menu a { display: block; padding: 16px 24px; border-bottom: 1px solid var(--h-line); color: var(--h-ink); text-decoration: none; font-size: 18px; font-weight: 600; }
+    .h-nav { display: flex; gap: 26px; font-size: 15px; font-weight: 500; }
+    .h-nav a { color: var(--h-ink); text-decoration: none; padding: 6px 0; border-bottom: 2px solid transparent; }
+    .h-nav a:hover { color: var(--h-brand); }
+    .h-nav a[aria-current="page"] { border-bottom-color: var(--h-brand); font-weight: 700; }
+    .h-header-actions { display: flex; align-items: center; gap: 12px; }
+    .h-menu-btn { display: none; width: 46px; height: 46px; border: 1px solid var(--h-field); background: #FFFFFF; cursor: pointer; align-items: center; justify-content: center; padding: 0; }
+    .h-mobile-menu { display: none; border-top: 1px solid var(--h-line); background: #FFFFFF; max-height: calc(100vh - 76px); overflow-y: auto; }
+    .h-mobile-menu a { display: block; padding: 15px 24px; border-bottom: 1px solid var(--h-line); color: var(--h-ink); text-decoration: none; font-size: 17px; font-weight: 600; }
     .h-mobile-menu.is-open { display: block; }
 
+    /* رأس الصفحات الداخلية */
+    .h-page-head { background: var(--h-ink); color: #FFFFFF; padding: 56px 0; position: relative; overflow: hidden; }
+    .h-page-head::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+        background: radial-gradient(40% 90% at 0% 0%, rgba(126, 104, 214, .32), rgba(126, 104, 214, 0) 70%), radial-gradient(30% 80% at 8% 100%, rgba(242, 182, 48, .18), rgba(242, 182, 48, 0) 70%); }
+    .h-page-head .h-wrap { position: relative; z-index: 1; }
+    .h-page-head h1 { margin: 0; font-family: var(--h-display); font-size: 38px; line-height: 1.4; color: #FFFFFF; }
+    .h-page-head p { margin: 10px 0 0; color: var(--h-on-dark); font-size: 17px; max-width: 720px; }
+    .h-page-chips { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+    .h-page-chips li { border: 1px solid var(--h-line-dark); padding: 4px 12px; font-size: 13px; color: var(--h-on-dark); display: inline-flex; align-items: center; gap: 6px; }
+    .h-page-chips i { color: var(--h-accent); }
+    .h-crumbs { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; color: var(--h-on-dark-2); margin-bottom: 14px; }
+    .h-crumbs a { color: var(--h-on-dark-2); text-decoration: none; }
+    .h-crumbs a:hover { color: #FFFFFF; text-decoration: underline; }
+
+    /* الفوتر */
+    .h-footer { background: var(--h-ink); color: var(--h-on-dark); padding: 56px 0 28px; font-size: 14px; }
+    .h-footer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 28px; }
+    .h-footer nav, .h-footer-col { display: flex; flex-direction: column; gap: 6px; }
+    .h-footer b { color: #FFFFFF; }
+    .h-footer a { color: var(--h-on-dark); text-decoration: none; }
+    .h-footer a:hover { color: #FFFFFF; text-decoration: underline; }
+    .h-footer-bottom { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; border-top: 1px solid var(--h-line-dark); margin-top: 36px; padding-top: 18px; font-size: 13px; }
+
+    /* شريط الإجراء على الموبايل */
+    .h-mobile-bar { display: none; }
+
+    @media (max-width: 960px) {
+        .h-nav, .h-header-cta, .h-hide-sm { display: none !important; }
+        .h-menu-btn { display: inline-flex; }
+        .h-wrap { padding: 0 16px; }
+        .h-h1, .h-page-head h1 { font-size: 28px; }
+        .h-h2 { font-size: 24px; }
+        .h-page-head { padding: 36px 0; }
+        .h-section { padding: 56px 0; }
+        .h-mobile-bar { display: flex; position: fixed; inset-inline: 0; bottom: 0; z-index: 50; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: #FFFFFF; border-top: 1px solid #D5D2E0; }
+        .h-mobile-bar .h-btn { min-height: 48px; }
+        .h-mobile-bar .h-btn-primary { flex: 1; }
+        body.h-has-mobile-bar { padding-bottom: 76px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+    /* ── أقسام مشتركة (بدأت في الرئيسية): بطل بصورة، بطاقات، فلاتر، تابات، أسئلة، نماذج ── */
     /* البطل: الصورة الحقيقية مع ألوان خفيفة على الأطراف بتتداخل مع الصورة */
     .h-hero { display: flex; flex-wrap: wrap; background: var(--h-ink); color: #FFFFFF; }
     .h-hero-copy { flex: 1 1 520px; min-width: 0; display: flex; padding: 88px 0; position: relative; z-index: 1; }
@@ -148,9 +213,6 @@
     .h-boxform { background: #FFFFFF; border: 1px solid #D5D2E0; padding: 28px; display: flex; flex-direction: column; gap: 14px; }
     .h-boxform h2, .h-boxform h3 { margin: 0; font-size: 21px; line-height: 1.5; }
     .h-boxform p { margin: 0; color: var(--h-text-2); font-size: 15px; }
-    .h-field { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; }
-    .h-field input, .h-field select, .h-field textarea { height: 48px; border: 1px solid #C9C5D6; background: #FFFFFF; font: inherit; font-size: 15px; font-weight: 400; color: var(--h-ink); padding: 0 12px; width: 100%; }
-    .h-field textarea { height: auto; min-height: 96px; padding: 10px 12px; resize: vertical; }
 
     /* المحاضرون */
     .h-faculty { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 24px; }
@@ -182,21 +244,7 @@
     .h-faq details[open] summary::after { content: '−'; }
     .h-faq p { margin: 0 0 16px; color: var(--h-text-2); }
 
-    /* الفوتر */
-    .h-footer { background: var(--h-ink); color: var(--h-on-dark); padding: 56px 0 28px; font-size: 14px; }
-    .h-footer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 28px; }
-    .h-footer nav { display: flex; flex-direction: column; gap: 6px; }
-    .h-footer b { color: #FFFFFF; }
-    .h-footer a { color: var(--h-on-dark); text-decoration: none; }
-    .h-footer a:hover { color: #FFFFFF; text-decoration: underline; }
-    .h-footer-bottom { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; border-top: 1px solid var(--h-line-dark); margin-top: 36px; padding-top: 18px; font-size: 13px; }
-
-    /* شريط الإجراء الثابت على الموبايل */
-    .h-mobile-bar { display: none; }
-
     @media (max-width: 960px) {
-        .h-nav, .h-header-cta, .h-hide-sm { display: none; }
-        .h-menu-btn { display: inline-flex; }
         .h-hero { flex-direction: column-reverse; flex-wrap: nowrap; }
         .h-stats .h-wrap { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .h-stat { padding: 18px 14px; }
@@ -214,8 +262,6 @@
             radial-gradient(60% 40% at 50% 100%, rgba(126, 104, 214, .4) 0%, rgba(126, 104, 214, 0) 70%); }
         .h-photo figcaption { display: none; }
         .h-section { padding: 56px 0; }
-        .h-h2 { font-size: 24px; }
-        .h-wrap { padding: 0 16px; }
         .h-flagship { padding: 22px; }
         .h-system { grid-template-columns: minmax(0, 1fr); }
         .h-system div:nth-last-child(-n + 2) { border-bottom: 1px solid var(--h-line); }
@@ -223,10 +269,5 @@
         .h-filters { gap: 14px; }
         .h-filter-group { flex-wrap: nowrap; overflow-x: auto; margin: 0 -16px; padding: 0 16px 4px; width: calc(100% + 32px); }
         .h-chip { flex: none; white-space: nowrap; }
-        .h-mobile-bar { display: flex; position: fixed; inset-inline: 0; bottom: 0; z-index: 50; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: #FFFFFF; border-top: 1px solid #D5D2E0; }
-        .h-mobile-bar .h-btn { min-height: 48px; }
-        .h-mobile-bar .h-btn-primary { flex: 1; }
-        body { padding-bottom: 76px; }
     }
-    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 </style>

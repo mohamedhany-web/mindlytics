@@ -86,57 +86,13 @@
     <meta name="twitter:image" content="{{ $photo1600 }}">
     @include('components.favicon-meta')
     <x-tracking-tags placement="head" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@600;700&display=swap">
     <link rel="preload" as="image" href="{{ $photo1600 }}" imagesrcset="{{ $photo900 }} 900w, {{ $photo1600 }} 1600w" imagesizes="(max-width: 960px) 100vw, 50vw">
-    @include('home.partials.styles')
+    @include('components.site.styles')
 </head>
-<body>
+<body class="h-site h-has-mobile-bar">
 <x-tracking-tags placement="body" />
 
-<div class="h-topbar">
-    <div class="h-wrap">
-        <span>القبول مفتوح للدفعات القادمة — <a href="#intakes" style="color: var(--h-accent); font-weight: 600">اعرض المواعيد</a></span>
-        <div class="h-topbar-links">
-            <a href="{{ route('public.certificates.verify') }}" class="h-hide-sm">التحقق من شهادة</a>
-            <a href="{{ url('/') }}?lang=en">English</a>
-            @auth
-                <a href="{{ route('dashboard') }}" style="font-weight: 600">حسابي</a>
-            @else
-                <a href="{{ route('login') }}" style="font-weight: 600">بوابة الطالب</a>
-            @endauth
-        </div>
-    </div>
-</div>
-
-<header class="h-header">
-    <div class="h-wrap">
-        <a href="{{ url('/') }}" class="h-logo" aria-label="Mindlytics — الرئيسية">
-            <span class="h-logo-mark" aria-hidden="true">M</span>
-            <span class="h-logo-text"><b>Mindlytics</b><span>أكاديمية البرمجة وتطوير البرمجيات</span></span>
-        </a>
-        <nav class="h-nav" aria-label="القائمة الرئيسية">
-            <a href="#programs">البرامج</a>
-            <a href="#intakes">الدفعات القادمة</a>
-            <a href="{{ route('public.courses') }}">الكورسات</a>
-            @if(($homeInstructors ?? collect())->isNotEmpty())<a href="#faculty">المحاضرون</a>@endif
-            <a href="#business">للشركات</a>
-        </nav>
-        <a href="#consult" class="h-btn h-btn-primary h-header-cta">احجز استشارة</a>
-        <button type="button" class="h-menu-btn" aria-expanded="false" aria-controls="h-mobile-menu" aria-label="فتح القائمة" data-menu-toggle>
-            <svg width="20" height="14" viewBox="0 0 20 14" aria-hidden="true"><path d="M0 1H20M0 7H20M0 13H20" stroke="#17142A" stroke-width="2" fill="none"/></svg>
-        </button>
-    </div>
-    <nav id="h-mobile-menu" class="h-mobile-menu" aria-label="القائمة على الموبايل">
-        <a href="#intakes" data-menu-close>الدفعات القادمة</a>
-        <a href="#programs" data-menu-close>البرامج</a>
-        <a href="{{ route('public.courses') }}">الكورسات</a>
-        <a href="{{ route('public.certificates.verify') }}">التحقق من شهادة</a>
-        <a href="#business" data-menu-close>للشركات</a>
-        <a href="{{ route('login') }}" style="color: var(--h-brand)">بوابة الطالب</a>
-    </nav>
-</header>
+@include('components.site.header')
 
 <main>
     {{-- البطل --}}
@@ -440,43 +396,7 @@
     </section>
 </main>
 
-<footer class="h-footer">
-    <div class="h-wrap">
-        <div class="h-footer-grid">
-            <div style="display: flex; flex-direction: column; gap: 8px">
-                <b class="h-kufi" style="font-size: 19px">Mindlytics</b>
-                <span>أكاديمية متخصصة في البرمجة وتطوير البرمجيات.</span>
-            </div>
-            <nav aria-label="البرامج">
-                <b>البرامج</b>
-                <a href="{{ route('public.learning-paths.index') }}">المسارات التعليمية</a>
-                <a href="{{ route('public.courses') }}">الكورسات</a>
-                <a href="#business">للشركات</a>
-            </nav>
-            <nav aria-label="الطلاب">
-                <b>الطلاب</b>
-                <a href="{{ route('login') }}">بوابة الطالب</a>
-                <a href="{{ route('public.certificates.verify') }}">التحقق من شهادة</a>
-                <a href="{{ route('public.faq') }}">الأسئلة الشائعة</a>
-            </nav>
-            <nav aria-label="الأكاديمية">
-                <b>Mindlytics</b>
-                <a href="{{ route('public.about') }}">عن Mindlytics</a>
-                <a href="{{ route('public.instructors.index') }}">المحاضرون</a>
-                <a href="{{ route('public.contact') }}">تواصل معنا</a>
-            </nav>
-        </div>
-        <div class="h-footer-bottom">
-            <span>© {{ date('Y') }} Mindlytics</span>
-            <span style="display: flex; gap: 16px"><a href="{{ route('public.terms') }}">الشروط والأحكام</a><a href="{{ route('public.privacy') }}">سياسة الخصوصية</a></span>
-        </div>
-    </div>
-</footer>
-
-<div class="h-mobile-bar">
-    <a href="#consult" class="h-btn h-btn-primary">احجز استشارة مجانية</a>
-    <a href="#intakes" class="h-btn h-btn-outline">الدفعات</a>
-</div>
+@include('components.site.footer')
 
 @include('home.partials.scripts')
 

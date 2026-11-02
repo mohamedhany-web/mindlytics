@@ -116,13 +116,13 @@ class AppServiceProvider extends ServiceProvider
         });
 
         // أي تضمين للناف بار يحدّث اللوجو حتى لو الصفحة غير مذكورة أعلاه
-        View::composer('components.unified-navbar', function ($view) {
+        View::composer(['components.unified-navbar', 'components.site.header'], function ($view) {
             if (! $view->offsetExists('platformLogoUrl') || blank($view->offsetGet('platformLogoUrl'))) {
                 $view->with('platformLogoUrl', SiteBranding::logoUrl());
             }
         });
 
-        View::composer(['components.unified-footer', 'cms::public.contact'], function ($view) {
+        View::composer(['components.unified-footer', 'components.site.footer', 'cms::public.contact'], function ($view) {
             $view->with('platformContact', PlatformSettings::contactPage());
         });
 

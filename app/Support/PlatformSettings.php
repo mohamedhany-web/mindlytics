@@ -83,6 +83,12 @@ class PlatformSettings
             'phone' => '01044610507',
             'email' => 'info@mindlytics-academy.com',
             'whatsapp' => '201044610507',
+            // روابط السوشيال في فوتر الموقع (تُعدَّل من إعدادات النظام)
+            'facebook' => 'https://www.facebook.com/profile.php?id=100094977003910',
+            'instagram' => 'https://www.instagram.com/mindlytics_eg/',
+            'linkedin' => 'https://www.linkedin.com/company/mindlytic/',
+            'youtube' => '',
+            'tiktok' => '',
             'hours' => [
                 ['label' => 'الأحد - الخميس', 'value' => '9:00 ص - 6:00 م', 'closed' => false],
                 ['label' => 'الجمعة', 'value' => 'مغلق', 'closed' => true],
