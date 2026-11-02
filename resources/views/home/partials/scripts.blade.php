@@ -26,7 +26,7 @@
             c.hidden = ! ok;
             if (ok) { shown++; }
         });
-        if (counter) { counter.textContent = shown === 0 ? 'لا توجد دفعات مطابقة' : (shown === 1 ? 'دفعة واحدة مطابقة' : shown + ' دفعات مطابقة'); }
+        if (counter) { counter.textContent = shown === 0 ? counter.dataset.lNone : (shown === 1 ? counter.dataset.lOne : shown + ' ' + counter.dataset.lMany); }
         if (empty) { empty.hidden = shown !== 0; }
     };
     document.querySelectorAll('[data-filter]').forEach(function (btn) {
@@ -52,8 +52,9 @@
     tabs.forEach(function (tab, i) {
         tab.addEventListener('click', function () { selectTab(tab); });
         tab.addEventListener('keydown', function (e) {
-            // RTL: السهم الشمال = التالي
-            var next = e.key === 'ArrowLeft' ? i + 1 : (e.key === 'ArrowRight' ? i - 1 : null);
+            // RTL: السهم الشمال = التالي، وLTR العكس
+            var rtl = document.documentElement.dir === 'rtl';
+            var next = e.key === (rtl ? 'ArrowLeft' : 'ArrowRight') ? i + 1 : (e.key === (rtl ? 'ArrowRight' : 'ArrowLeft') ? i - 1 : null);
             if (next === null) { return; }
             e.preventDefault();
             var t = tabs[(next + tabs.length) % tabs.length];
@@ -68,7 +69,7 @@
         var select = form.querySelector('[data-program-select]');
         var message = form.querySelector('[data-consult-message]');
         var syncMessage = function () {
-            if (message && select) { message.value = 'طلب استشارة أكاديمية من الصفحة الرئيسية. البرنامج: ' + select.value; }
+            if (message && select) { message.value = message.dataset.lPrefix + select.value; }
         };
         document.querySelectorAll('[data-program]').forEach(function (a) {
             a.addEventListener('click', function () {

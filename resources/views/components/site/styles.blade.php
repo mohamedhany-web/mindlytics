@@ -153,6 +153,10 @@
             radial-gradient(52% 44% at 0% 0%, rgba(126, 104, 214, .52) 0%, rgba(126, 104, 214, .18) 48%, rgba(126, 104, 214, 0) 74%),
             radial-gradient(34% 40% at 72% 100%, rgba(126, 104, 214, .42) 0%, rgba(126, 104, 214, 0) 70%),
             radial-gradient(30% 34% at 70% 0%, rgba(242, 182, 48, .22) 0%, rgba(242, 182, 48, 0) 70%); }
+    [dir="ltr"] .h-photo::before { background:
+            linear-gradient(to right, var(--h-ink) 0%, rgba(23, 20, 42, .72) 9%, rgba(23, 20, 42, .18) 26%, rgba(23, 20, 42, 0) 38%),
+            linear-gradient(to top, rgba(23, 20, 42, .55) 0%, rgba(23, 20, 42, 0) 22%); }
+    [dir="ltr"] .h-photo::after { transform: scaleX(-1); }
     .h-photo figcaption { position: absolute; bottom: 16px; inset-inline-end: 16px; background: rgba(255, 255, 255, .94); color: var(--h-ink); font-size: 13px; padding: 6px 12px; }
 
     /* الأرقام */
@@ -261,7 +265,7 @@
         .h-hero p { font-size: 16px; }
         .h-photo { flex: none; min-height: 0; aspect-ratio: 3 / 2; }
         /* على الموبايل الصورة فوق، فالطرف اللي تحت هو اللي بيذوب في الخلفية */
-        .h-photo::before { background: linear-gradient(to top, var(--h-ink) 0%, rgba(23, 20, 42, .6) 12%, rgba(23, 20, 42, 0) 40%); }
+        .h-photo::before, [dir="ltr"] .h-photo::before { background: linear-gradient(to top, var(--h-ink) 0%, rgba(23, 20, 42, .6) 12%, rgba(23, 20, 42, 0) 40%); }
         .h-photo::after { background:
             radial-gradient(60% 55% at 0% 0%, rgba(126, 104, 214, .5) 0%, rgba(126, 104, 214, 0) 72%),
             radial-gradient(55% 50% at 100% 0%, rgba(242, 182, 48, .38) 0%, rgba(242, 182, 48, 0) 70%),
