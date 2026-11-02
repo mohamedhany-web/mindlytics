@@ -94,6 +94,7 @@ class SalesCourseBoardController extends Controller
             'audience' => ['nullable', 'string', 'max:255'],
             'instructor_name' => ['nullable', 'string', 'max:255'],
             'start_label' => ['nullable', 'string', 'max:255'],
+            'starts_at' => ['nullable', 'date'],
             'schedule_days' => ['nullable', 'string', 'max:255'],
             'duration' => ['nullable', 'string', 'max:255'],
             'hours' => ['nullable', 'string', 'max:255'],
@@ -109,6 +110,7 @@ class SalesCourseBoardController extends Controller
             'landing_published' => ['sometimes', 'boolean'],
         ]);
 
+        $validated['starts_at'] = $validated['starts_at'] ?? null;
         $validated['is_active'] = $request->boolean('is_active');
         $validated['landing_published'] = $request->boolean('landing_published');
         $validated['sort_order'] = (int) ($validated['sort_order'] ?? 0);
