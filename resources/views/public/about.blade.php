@@ -711,15 +711,18 @@
 
             [x-cloak] { display: none !important; }
         </style>
-    </head>
+        {{-- هوية الموقع الموحّدة (docs/SITE_DESIGN.md) --}}
+    @include('components.site.styles')
+    @include('components.site.legacy-theme')
+</head>
 
-<body class="bg-gray-50 text-gray-900"
+<body class="h-site h-has-mobile-bar"
       x-data="{ mobileMenu: false, searchQuery: '' }"
       :class="{ 'overflow-hidden': mobileMenu }">
 
-    @include('components.unified-navbar')
+    @include('components.site.header')
     
-    <main>
+    <main class="h-legacy">
 
     <!-- Hero Section -->
     <section class="hero-section relative overflow-hidden min-h-[85vh] flex items-center">
@@ -788,9 +791,9 @@
                     </p>
                 </div>
                 <div class="lg:col-span-5 reveal-from-left flex justify-center lg:justify-start">
-                    <div class="w-full max-w-sm aspect-square rounded-3xl bg-gradient-to-br from-blue-100 via-green-50/80 to-blue-100 flex items-center justify-center shadow-2xl shadow-blue-200/30 border border-blue-100/50">
-                        <i class="fas fa-graduation-cap text-blue-400/60 text-7xl md:text-8xl"></i>
-                    </div>
+                    <figure class="h-photo-card w-full" style="aspect-ratio: 4 / 3; margin: 0">
+                        <img src="{{ asset('images/home/classroom-900.jpg') }}" alt="{{ app()->getLocale() === 'ar' ? 'طلاب Mindlytics مع المحاضر داخل قاعة الدراسة' : 'Mindlytics students with their instructor in class' }}" loading="lazy" width="900" height="600">
+                    </figure>
                 </div>
             </div>
         </div>
@@ -960,7 +963,7 @@
     </main>
     
     <!-- Unified Footer -->
-    @include('components.unified-footer')
+    @include('components.site.footer')
 
     <script>
         // Counter Animation

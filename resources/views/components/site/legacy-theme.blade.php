@@ -44,6 +44,14 @@
     .h-legacy .section-title::after { background: var(--h-brand) !important; }
     .h-legacy .careers-badge { background: var(--h-mist) !important; border-color: var(--h-line) !important; color: var(--h-brand) !important; }
 
+    /* بطاقة السعر والأزرار في صفحات توصيف الكورسات (course-info) */
+    .h-legacy .price-panel { background: var(--h-ink) !important; background-image: radial-gradient(60% 50% at 0% 0%, rgba(126, 104, 214, .3), rgba(126, 104, 214, 0) 70%) !important; border-radius: 0 !important; box-shadow: none !important; color: #FFFFFF; }
+    .h-legacy .price-panel .text-blue-100 { color: var(--h-on-dark-2) !important; }
+    .h-legacy .price-tag { background: transparent !important; border: 1px solid var(--h-line-dark) !important; border-radius: 0 !important; }
+    .h-legacy .cta-primary { background: var(--h-accent) !important; color: var(--h-ink) !important; border-radius: 0 !important; box-shadow: none !important; }
+    .h-legacy .cta-outline { background: transparent !important; color: #FFFFFF !important; border: 1px solid #FFFFFF !important; border-radius: 0 !important; }
+    .h-legacy :is(.stat-card, .content-panel) { border-radius: 2px !important; box-shadow: none !important; border: 1px solid var(--h-line) !important; background: #FFFFFF; }
+
     /* الخانات */
     .h-legacy input:where(:not([type="checkbox"], [type="radio"], [type="file"], [type="range"], [type="color"], [type="hidden"], [type="submit"], [type="button"])),
     .h-legacy select, .h-legacy textarea { border-radius: 0; border-color: var(--h-field); font-family: inherit; }
@@ -62,13 +70,28 @@
     .h-legacy > section:first-of-type:is(.hero-gradient, .hero-faq, .hero-legal, .hero-help) p { color: var(--h-on-dark) !important; text-shadow: none !important; font-size: 17px !important; margin-inline: 0; }
     .h-legacy > section:first-of-type:is(.hero-gradient, .hero-faq, .hero-legal, .hero-help) .mx-auto { margin-inline: 0; }
 
+    /* أبطال صفحات الكتالوج والمسارات وعن الأكاديمية وصفحة الكورس (.hero-section) */
+    .h-legacy .hero-section { min-height: 0 !important; padding: 56px 0 48px !important; background: var(--h-ink) !important;
+        background-image: radial-gradient(40% 90% at 0% 0%, rgba(126, 104, 214, .32), rgba(126, 104, 214, 0) 70%), radial-gradient(30% 80% at 8% 100%, rgba(242, 182, 48, .18), rgba(242, 182, 48, 0) 70%) !important; color: #FFFFFF; }
+    .h-legacy .hero-section::before, .h-legacy .hero-section::after, .h-legacy .hero-section .animated-background, .h-legacy .hero-section .hero-glow { display: none !important; }
+    .h-legacy .hero-section > div > .text-center, .h-legacy .hero-section > div > div > .text-center { text-align: start; }
+    .h-legacy .hero-section > div > .text-center > :is(p, div), .h-legacy .hero-section .max-w-3xl.mx-auto, .h-legacy .hero-section .max-w-4xl.mx-auto { margin-inline: 0; }
+    .h-legacy .hero-section h1 { font-size: 38px !important; line-height: 1.4 !important; color: #FFFFFF !important; margin-bottom: 10px !important; }
+    .h-legacy .hero-section h1 * { color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF; background: none !important; animation: none !important; }
+    .h-legacy .hero-section h1 + p { color: var(--h-on-dark) !important; font-size: 17px !important; margin-bottom: 24px !important; }
+    .h-legacy .hero-section :is(.rounded-full, .rounded-2xl, .rounded-3xl) { border-radius: 0; }
+    .h-legacy .hero-section .fade-in-up { animation: none; opacity: 1; transform: none; }
+    .h-legacy .hero-section span[class*="bg-white"] { background: transparent !important; border: 1px solid var(--h-line-dark) !important; color: var(--h-accent) !important; }
+    .h-legacy .hero-section nav :is(a, span, li) { color: var(--h-on-dark-2) !important; }
+
     /* الهيدر بقى sticky مش fixed: شيل المسافة اللي كانت متسابة له فوق الصفحات */
     .h-legacy > :first-child:is(.pt-24, .pt-28, .pt-32) { padding-top: 40px !important; }
     .h-legacy > :first-child[style*="padding-top"] { padding-top: 40px !important; }
     .h-legacy > :is(section, div):first-child.min-h-screen { min-height: 0; }
     @media (max-width: 960px) {
         .h-legacy > section:first-of-type:is(.hero-gradient, .hero-faq, .hero-legal, .hero-help) { padding: 36px 0 !important; }
-        .h-legacy > section:first-of-type:is(.hero-gradient, .hero-faq, .hero-legal, .hero-help) h1 { font-size: 28px !important; }
+        .h-legacy > section:first-of-type:is(.hero-gradient, .hero-faq, .hero-legal, .hero-help) h1, .h-legacy .hero-section h1 { font-size: 28px !important; }
+        .h-legacy .hero-section { padding: 36px 0 32px !important; }
         .h-legacy > :first-child:is(.pt-24, .pt-28, .pt-32), .h-legacy > :first-child[style*="padding-top"] { padding-top: 24px !important; }
     }
 </style>

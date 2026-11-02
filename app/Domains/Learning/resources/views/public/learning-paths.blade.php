@@ -677,9 +677,12 @@
                 display: none !important; 
             }
         </style>
-    </head>
+        {{-- هوية الموقع الموحّدة (docs/SITE_DESIGN.md) --}}
+    @include('components.site.styles')
+    @include('components.site.legacy-theme')
+</head>
 
-<body class="bg-gray-50 text-gray-900"
+<body class="h-site h-has-mobile-bar"
       x-data="{
           mobileMenu: false,
           searchQuery: '',
@@ -710,9 +713,9 @@
       }"
       :class="{ 'overflow-hidden': mobileMenu }">
 
-    @include('components.unified-navbar')
+    @include('components.site.header')
     
-    <main>
+    <main class="h-legacy">
 
     <!-- Hero Section -->
     <section class="hero-section relative overflow-hidden min-h-[85vh] flex items-center">
@@ -977,7 +980,7 @@
     </main>
     
     <!-- Unified Footer -->
-    @include('components.unified-footer')
+    @include('components.site.footer')
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {

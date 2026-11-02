@@ -73,13 +73,16 @@
         main { padding-top: 1rem !important; }
         @endif
     </style>
+    {{-- هوية الموقع الموحّدة (docs/SITE_DESIGN.md) --}}
+    @include('components.site.styles')
+    @include('components.site.legacy-theme')
 </head>
-<body>
+<body class="h-site h-has-mobile-bar">
     @unless(request()->boolean('embed'))
-        @include('components.unified-navbar')
+        @include('components.site.header')
     @endunless
 
-    <main>
+    <main class="h-legacy">
         <section class="hero-section pt-10 pb-8 sm:pt-14 sm:pb-10 px-4">
             <div class="max-w-3xl mx-auto text-center relative z-10">
                 <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-500/30 mb-5">
@@ -204,5 +207,6 @@
             </div>
         </section>
     </main>
+    @include('components.site.footer')
 </body>
 </html>

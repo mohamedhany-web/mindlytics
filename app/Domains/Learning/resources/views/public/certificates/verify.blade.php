@@ -10,8 +10,13 @@
     <title>التحقق من الشهادة - Mindlytics</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {{-- هوية الموقع الموحّدة (docs/SITE_DESIGN.md) --}}
+    @include('components.site.styles')
+    @include('components.site.legacy-theme')
 </head>
-<body class="bg-slate-50">
+<body class="h-site h-has-mobile-bar">
+    @include('components.site.header')
+    <div class="h-legacy">
     <div class="min-h-screen py-12 px-4">
         <div class="max-w-5xl mx-auto">
             <div class="text-center mb-8">
@@ -146,5 +151,7 @@
             @endif
         </div>
     </div>
+    </div>
+    @include('components.site.footer')
 </body>
 </html>

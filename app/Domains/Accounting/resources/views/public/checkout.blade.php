@@ -373,8 +373,11 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
         }
     </style>
+    {{-- هوية الموقع الموحّدة (docs/SITE_DESIGN.md) --}}
+    @include('components.site.styles')
+    @include('components.site.legacy-theme')
 </head>
-<body class="bg-gray-50 text-gray-900"
+<body class="h-site h-has-mobile-bar"
       x-data="{ mobileMenu: false }"
       :class="{ 'overflow-hidden': mobileMenu }">
     <x-tracking-tags placement="body" />
@@ -406,9 +409,9 @@
     @endphp
     <x-ecommerce-datalayer :payload="$__mlBeginCheckout" />
 
-    @include('components.unified-navbar')
+    @include('components.site.header')
     
-    <main>
+    <main class="h-legacy">
         <!-- Hero Section -->
         <section class="hero-section relative overflow-hidden py-12 lg:py-16">
             <!-- Animated Background -->
@@ -1015,7 +1018,7 @@
         </section>
     </main>
 
-    @include('components.unified-footer')
+    @include('components.site.footer')
 
     <script>
         window.__checkoutRegistered = {{ auth()->check() ? 'true' : 'false' }};

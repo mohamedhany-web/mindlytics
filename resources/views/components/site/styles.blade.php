@@ -94,6 +94,12 @@
     .h-crumbs a { color: var(--h-on-dark-2); text-decoration: none; }
     .h-crumbs a:hover { color: #FFFFFF; text-decoration: underline; }
 
+    /* صورة بنفس تداخل الألوان على الأطراف (للصفحات الداخلية) */
+    .h-photo-card { position: relative; overflow: hidden; isolation: isolate; background: var(--h-ink); }
+    .h-photo-card img { width: 100%; height: 100%; object-fit: cover; display: block; position: relative; z-index: -2; }
+    .h-photo-card::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+        background: radial-gradient(55% 50% at 0% 0%, rgba(126, 104, 214, .45), rgba(126, 104, 214, 0) 72%), radial-gradient(50% 45% at 100% 100%, rgba(242, 182, 48, .32), rgba(242, 182, 48, 0) 70%), linear-gradient(to top, rgba(23, 20, 42, .35), rgba(23, 20, 42, 0) 40%); }
+
     /* الفوتر */
     .h-footer { background: var(--h-ink); color: var(--h-on-dark); padding: 56px 0 28px; font-size: 14px; }
     .h-footer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 28px; }
