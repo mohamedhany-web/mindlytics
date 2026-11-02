@@ -1,4 +1,4 @@
-{{-- الصفحة الرئيسية الجديدة: مدرسة متخصصة في البيانات والذكاء الاصطناعي (docs/HOMEPAGE.md). عربي فقط؛ الإنجليزي على welcome. --}}
+{{-- الصفحة الرئيسية الجديدة: أكاديمية متخصصة في البرمجة وتطوير البرمجيات (docs/HOMEPAGE.md). عربي فقط؛ الإنجليزي على welcome. --}}
 @php
     $photo1600 = asset('images/home/classroom-1600.jpg');
     $photo900 = asset('images/home/classroom-900.jpg');
@@ -114,7 +114,7 @@
     <div class="h-wrap">
         <a href="{{ url('/') }}" class="h-logo" aria-label="Mindlytics — الرئيسية">
             <span class="h-logo-mark" aria-hidden="true">M</span>
-            <span class="h-logo-text"><b>Mindlytics</b><span>مدرسة البيانات والذكاء الاصطناعي</span></span>
+            <span class="h-logo-text"><b>Mindlytics</b><span>أكاديمية البرمجة وتطوير البرمجيات</span></span>
         </a>
         <nav class="h-nav" aria-label="القائمة الرئيسية">
             <a href="#programs">البرامج</a>
@@ -143,9 +143,9 @@
     <section class="h-hero" aria-labelledby="h-hero-title">
         <div class="h-hero-copy">
             <div class="h-hero-inner">
-                <span class="h-eyebrow h-eyebrow-accent" style="margin: 0">مدرسة متخصصة في البيانات والذكاء الاصطناعي</span>
-                <h1 id="h-hero-title">نُعِدّ محللي بيانات جاهزين لسوق العمل</h1>
-                <p>برامج بدفعات لها مواعيد ثابتة، ومحاضرون من السوق، ومشروع تخرّج على بيانات حقيقية، وشهادة يمكن لأي جهة التحقق منها.</p>
+                <span class="h-eyebrow h-eyebrow-accent" style="margin: 0">أكاديمية متخصصة في البرمجة وتطوير البرمجيات</span>
+                <h1 id="h-hero-title">نؤهّلك لمهنة حقيقية في عالم البرمجيات</h1>
+                <p>برامج في مختلف مجالات البرمجيات، بدفعات لها مواعيد ثابتة، ومحاضرون من السوق، ومشاريع تطبيقية حقيقية، وشهادة يمكن لأي جهة التحقق منها.</p>
                 <div class="h-hero-actions">
                     <a href="#intakes" class="h-btn h-btn-accent h-btn-lg">ابحث عن دفعتك</a>
                     <a href="#consult" class="h-link">أو احجز استشارة مجانية</a>
@@ -321,7 +321,7 @@
                 <div class="h-system">
                     <div><b>محاضرات مباشرة</b><span>أونلاين أو في الفرع، مع تسجيل للمحاضرات.</span></div>
                     <div><b>بوابة الطالب</b><span>واجبات واختبارات وتقدّم واضح لكل طالب.</span></div>
-                    <div><b>مشروع تطبيقي</b><span>على بيانات أو حالة عمل حقيقية، يُضاف إلى ملف أعمالك.</span></div>
+                    <div><b>مشروع تطبيقي</b><span>على مشروع أو حالة عمل حقيقية، يُضاف إلى ملف أعمالك.</span></div>
                     <div><b>شهادة برقم تحقق</b><span>يمكن لأي جهة توظيف التأكد منها من موقعنا.</span></div>
                 </div>
             </div>
@@ -389,7 +389,7 @@
     <section id="business" class="h-business" aria-labelledby="h-business-title">
         <div class="h-wrap">
             <div style="flex: 1 1 520px; min-width: 0">
-                <h2 id="h-business-title" class="h-h2" style="color: #FFFFFF; font-size: 28px">تدريب فرق الشركات على البيانات والذكاء الاصطناعي</h2>
+                <h2 id="h-business-title" class="h-h2" style="color: #FFFFFF; font-size: 28px">تدريب فرق الشركات على البرمجة والتقنيات الحديثة</h2>
                 <p>برنامج مخصّص لاحتياج فريقك، في مقرّكم أو في الفرع، مع متابعة لتقدّم كل موظف.</p>
             </div>
             <a href="#consult" class="h-btn h-btn-accent h-btn-lg" data-program="تدريب لشركة">اطلب عرض تدريب</a>
@@ -445,7 +445,7 @@
         <div class="h-footer-grid">
             <div style="display: flex; flex-direction: column; gap: 8px">
                 <b class="h-kufi" style="font-size: 19px">Mindlytics</b>
-                <span>مدرسة متخصصة في البيانات والذكاء الاصطناعي.</span>
+                <span>أكاديمية متخصصة في البرمجة وتطوير البرمجيات.</span>
             </div>
             <nav aria-label="البرامج">
                 <b>البرامج</b>
@@ -459,7 +459,7 @@
                 <a href="{{ route('public.certificates.verify') }}">التحقق من شهادة</a>
                 <a href="{{ route('public.faq') }}">الأسئلة الشائعة</a>
             </nav>
-            <nav aria-label="المدرسة">
+            <nav aria-label="الأكاديمية">
                 <b>Mindlytics</b>
                 <a href="{{ route('public.about') }}">عن Mindlytics</a>
                 <a href="{{ route('public.instructors.index') }}">المحاضرون</a>

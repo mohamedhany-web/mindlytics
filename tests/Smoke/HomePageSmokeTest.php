@@ -21,7 +21,8 @@ class HomePageSmokeTest extends SmokeTestCase
         SalesCourseBoardEntry::create(['name' => 'Smoke Hidden Course', 'is_active' => false]);
 
         $html = $this->get('/?lang=ar')->assertOk()
-            ->assertSee('نُعِدّ محللي بيانات جاهزين لسوق العمل')
+            ->assertSee('نؤهّلك لمهنة حقيقية في عالم البرمجيات')
+            ->assertDontSee('مدرسة')
             ->assertSee('images/home/classroom-1600.jpg', false)
             ->assertSee('Smoke Data Diploma')
             ->assertSee('Smoke Python Course')
