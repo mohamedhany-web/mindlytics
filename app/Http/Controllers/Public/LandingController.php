@@ -91,11 +91,6 @@ class LandingController extends Controller
             'featuredCourses'
         );
 
-        // الصفحة الجديدة (docs/HOMEPAGE.md) بالعربي؛ الإنجليزي يفضل على الصفحة القديمة لحد ما تتترجم
-        if (app()->getLocale() !== 'ar') {
-            return view('welcome', $data);
-        }
-
         $homeDiploma = SalesDiplomaBoardEntry::query()->active()->ordered()->first();
 
         return view('home.index', $data + [
@@ -114,23 +109,24 @@ class LandingController extends Controller
      */
     private function homeIntakes(): Collection
     {
-        $mode = function (?string $format): array {
+        $ar = app()->getLocale() === 'ar';
+        $mode = function (?string $format) use ($ar): array {
             $f = mb_strtolower((string) $format);
 
             return match (true) {
-                str_contains($f, 'حضور') || str_contains($f, 'offline') || str_contains($f, 'hybrid') => ['campus', filled($format) ? (string) $format : 'حضوري'],
+                str_contains($f, 'حضور') || str_contains($f, 'offline') || str_contains($f, 'hybrid') => ['campus', filled($format) ? (string) $format : ($ar ? 'حضوري' : 'On campus')],
                 str_contains($f, 'مسجل') || str_contains($f, 'مسجّل') || str_contains($f, 'record') => ['recorded', (string) $format],
-                default => ['online', filled($format) ? (string) $format : 'أونلاين مباشر'],
+                default => ['online', filled($format) ? (string) $format : ($ar ? 'أونلاين مباشر' : 'Live online')],
             };
         };
-        $price = fn ($online) => $online !== null && (float) $online > 0 ? number_format((float) $online, 0).' ج.م' : null;
+        $price = fn ($online) => $online !== null && (float) $online > 0 ? number_format((float) $online, 0).($ar ? ' ج.م' : ' EGP') : null;
 
         $diplomas = SalesDiplomaBoardEntry::query()->active()->ordered()->limit(12)->get()
-            ->map(function (SalesDiplomaBoardEntry $e) use ($mode, $price) {
+            ->map(function (SalesDiplomaBoardEntry $e) use ($mode, $price, $ar) {
                 [$key, $label] = $mode($e->format);
 
                 return [
-                    'kind' => 'diploma', 'type' => 'دبلومة', 'name' => (string) $e->name,
+                    'kind' => 'diploma', 'type' => $ar ? 'دبلومة' : 'Diploma', 'name' => (string) $e->name,
                     'start' => $e->startDisplay(), 'sort' => $e->starts_at?->timestamp ?? PHP_INT_MAX,
                     'days' => filled($e->schedule_days) ? (string) $e->schedule_days : null,
                     'mode' => $label, 'mode_key' => $key, 'price' => $price($e->price_online), 'url' => $e->landingUrl(),
@@ -138,10 +134,10 @@ class LandingController extends Controller
             });
 
         $courses = SalesCourseBoardEntry::query()->active()->ordered()->limit(12)->get()
-            ->map(function (SalesCourseBoardEntry $e) use ($mode, $price) {
+            ->map(function (SalesCourseBoardEntry $e) use ($mode, $price, $ar) {
                 [$key, $label] = $mode($e->format);
                 return [
-                    'kind' => 'course', 'type' => 'كورس', 'name' => (string) $e->name,
+                    'kind' => 'course', 'type' => $ar ? 'كورس' : 'Course', 'name' => (string) $e->name,
                     'start' => $e->startDisplay(), 'sort' => $e->starts_at?->timestamp ?? PHP_INT_MAX - 1,
                     'days' => filled($e->schedule_days) ? (string) $e->schedule_days : null,
                     'mode' => $label, 'mode_key' => $key, 'price' => $price($e->price_online), 'url' => $e->landingUrl(),

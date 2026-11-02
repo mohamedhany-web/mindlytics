@@ -61,9 +61,12 @@ class HomePageSmokeTest extends SmokeTestCase
         $this->get('/?lang=ar')->assertOk()->assertSee('أبلغوني بالدفعة القادمة');
     }
 
-    public function test_english_keeps_the_previous_homepage(): void
+    public function test_english_homepage_uses_the_same_design(): void
     {
-        $this->get('/?lang=en')->assertOk()->assertDontSee('h-hero', false);
+        $this->get('/?lang=en')->assertOk()
+            ->assertSee('We prepare you for a real career in software')
+            ->assertSee('dir="ltr"', false)
+            ->assertSee('h-hero', false);
     }
 
     public function test_consultation_form_reaches_contact_messages(): void

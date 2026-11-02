@@ -5,8 +5,8 @@
 
 **ممنوع في الكلام الثابت:** كلمة «مدرسة»، وأي جملة بتحصر الأكاديمية في مجال واحد (زي «محللي بيانات»). الأكاديمية موجودة في كل مجالات البرمجيات.
 
-- **الكود:** `resources/views/home/index.blade.php`، والستايل في `home/partials/styles.blade.php`، والسلوك في `home/partials/scripts.blade.php`. مفيش Tailwind ولا build؛ CSS وJS عاديين.
-- **الكنترولر:** `LandingController::index` بيرجّع `home.index` لما اللغة عربي. **الإنجليزي لسه على `welcome`** لحد ما الصفحة الجديدة تتترجم.
+- **الكود:** `resources/views/home/index.blade.php`، والسلوك في `home/partials/scripts.blade.php`. الستايل مشترك مع كل الموقع في `components/site/styles.blade.php` (docs/SITE_DESIGN.md).
+- **الكنترولر:** `LandingController::index` بيرجّع `home.index` بالعربي والإنجليزي. النصوص في الـ view نفسه بـ `$t('عربي', 'English')`، والاتجاه (RTL/LTR) بيتظبط لوحده، وده يشمل ناحية دمج الصورة مع النص.
 - **الصورة:** `public/images/home/classroom-1600.jpg` و`classroom-900.jpg` (صورة حقيقية لطلاب الأكاديمية في الفرع). الأطراف عليها ألوان خفيفة من البراند (`.h-photo::before` و`::after`): الطرف الملاصق للنص بيذوب في الخلفية الغامقة، وفي الأركان لمسات بنفسجي وأصفر.
 
 ## البيانات
