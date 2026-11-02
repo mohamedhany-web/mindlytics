@@ -7,6 +7,7 @@ return [
     // Domain modules (docs/MODULARIZATION_PLAN.md)
     App\Domains\Investment\InvestmentServiceProvider::class,
     App\Domains\Scholarship\ScholarshipServiceProvider::class,
+    App\Domains\Advising\AdvisingServiceProvider::class,
     App\Domains\Hr\HrServiceProvider::class,
     App\Domains\Sales\SalesServiceProvider::class,
     App\Domains\Messaging\MessagingServiceProvider::class,

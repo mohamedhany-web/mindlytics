@@ -200,6 +200,9 @@ POST reset-password [password.update] {web,guest,guest-only,throttle:password-re
 GET|HEAD scholarships/{slug} [scholarships.show] {web}
 GET|HEAD scholarships/{slug}/register [scholarships.register] {web}
 POST scholarships/{slug}/register [scholarships.register.post] {web,throttle:register}
+GET|HEAD advising [advising.show] {web}
+GET|HEAD advising/slots [advising.slots] {web,throttle:60,1}
+POST advising [advising.store] {web,throttle:8,10}
 GET|HEAD 2fa/challenge [two-factor.challenge] {web,web,throttle:60,5}
 POST 2fa/verify [two-factor.verify] {web,web,throttle:60,5}
 GET|POST|HEAD logout [logout] {web,auth}
@@ -834,6 +837,15 @@ DELETE admin/scholarships/groups/{group} [admin.scholarships.groups.destroy] {we
 POST admin/scholarships/registrations/{registration}/activate [admin.scholarships.registrations.activate] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/scholarships/registrations/{registration}/deactivate [admin.scholarships.registrations.deactivate] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/scholarships/registrations/{registration}/reject [admin.scholarships.registrations.reject] {web,auth,prevent-concurrent,role:admin|super_admin}
+GET|HEAD admin/advising [admin.advising.bookings] {web,auth,prevent-concurrent,role:admin|super_admin}
+PUT admin/advising/bookings/{booking} [admin.advising.bookings.update] {web,auth,prevent-concurrent,role:admin|super_admin}
+GET|HEAD admin/advising/availability [admin.advising.availability] {web,auth,prevent-concurrent,role:admin|super_admin}
+POST admin/advising/availability [admin.advising.availability.store] {web,auth,prevent-concurrent,role:admin|super_admin}
+PUT admin/advising/availability/{rule} [admin.advising.availability.update] {web,auth,prevent-concurrent,role:admin|super_admin}
+DELETE admin/advising/availability/{rule} [admin.advising.availability.destroy] {web,auth,prevent-concurrent,role:admin|super_admin}
+POST admin/advising/blocked [admin.advising.blocked.store] {web,auth,prevent-concurrent,role:admin|super_admin}
+DELETE admin/advising/blocked/{blocked} [admin.advising.blocked.destroy] {web,auth,prevent-concurrent,role:admin|super_admin}
+PUT admin/advising/settings [admin.advising.settings.update] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/investment [admin.investment.dashboard] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/investment/plans [admin.investment.plans.index] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/investment/plans/create [admin.investment.plans.create] {web,auth,prevent-concurrent,role:admin|super_admin}

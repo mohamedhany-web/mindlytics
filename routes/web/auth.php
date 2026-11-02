@@ -24,6 +24,9 @@ Route::middleware(['guest', 'guest-only'])->group(function () {
 // المنح الدراسية — تسجيل عام برابط خاص
 require app_path('Domains/Scholarship/routes/public.php');
 
+// الإرشاد المهني — حجز جلسة (docs/ADVISING.md)
+require app_path('Domains/Advising/routes/public.php');
+
 // المصادقة الثنائية (2FA) - بعد إدخال البريد وكلمة المرور للمدربين/الإدمن/الموظفين
 Route::middleware(['web', 'throttle:60,5'])->group(function () {
     Route::get('/2fa/challenge', [\App\Http\Controllers\Auth\TwoFactorController::class, 'showChallenge'])->name('two-factor.challenge');

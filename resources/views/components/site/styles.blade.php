@@ -100,6 +100,17 @@
     .h-photo-card::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
         background: radial-gradient(55% 50% at 0% 0%, rgba(126, 104, 214, .45), rgba(126, 104, 214, 0) 72%), radial-gradient(50% 45% at 100% 100%, rgba(242, 182, 48, .32), rgba(242, 182, 48, 0) 70%), linear-gradient(to top, rgba(23, 20, 42, .35), rgba(23, 20, 42, 0) 40%); }
 
+    /* كارت جلسة الإرشاد في الرئيسية */
+    .h-adv-card { background: var(--h-ink) !important; color: #FFFFFF; border: 0 !important; background-image: radial-gradient(60% 60% at 0% 0%, rgba(126, 104, 214, .36), rgba(126, 104, 214, 0) 72%), radial-gradient(50% 50% at 100% 100%, rgba(242, 182, 48, .2), rgba(242, 182, 48, 0) 70%) !important; }
+    .h-adv-card .h-eyebrow { color: var(--h-accent); }
+    .h-adv-card h2 { color: #FFFFFF; }
+    .h-adv-card p { color: var(--h-on-dark-2) !important; }
+    .h-adv-card .h-btn-primary { background: var(--h-accent); color: var(--h-ink); }
+    .h-adv-card .h-btn-primary:hover { background: #FFC94D; }
+    .h-adv-points { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; color: var(--h-on-dark); }
+    .h-adv-points li { display: flex; gap: 10px; align-items: baseline; }
+    .h-adv-points li::before { content: ''; flex: none; width: 6px; height: 6px; background: var(--h-accent); transform: translateY(-2px); }
+
     /* الفوتر */
     .h-footer { background: var(--h-ink); color: var(--h-on-dark); padding: 56px 0 28px; font-size: 14px; }
     .h-footer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 28px; }
