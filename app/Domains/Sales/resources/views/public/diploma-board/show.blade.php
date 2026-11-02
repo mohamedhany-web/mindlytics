@@ -47,60 +47,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     {{-- هوية الموقع الموحّدة (docs/SITE_DESIGN.md) --}}
     @include('components.site.styles')
-    <style>
-        .dip-body { padding: 56px 0 88px; }
-        .dip-block + .dip-block { margin-top: 48px; }
-        .dip-block > h2 { margin: 0 0 18px; font-family: var(--h-display); font-size: 24px; line-height: 1.5; }
-        .dip-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); margin: 0; border-top: 2px solid var(--h-ink); }
-        .dip-facts div { display: flex; gap: 14px; align-items: flex-start; padding: 18px 0; border-bottom: 1px solid var(--h-line); padding-inline-end: 16px; }
-        .dip-facts i { width: 40px; height: 40px; flex: none; display: flex; align-items: center; justify-content: center; background: var(--h-mist); color: var(--h-brand); }
-        .dip-facts dt { font-size: 13px; color: var(--h-muted); }
-        .dip-facts dd { margin: 2px 0 0; font-weight: 700; overflow-wrap: anywhere; unicode-bidi: plaintext; text-align: right; }
-        .dip-highlights { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 12px; }
-        .dip-highlights li { display: flex; gap: 12px; align-items: flex-start; padding: 16px 18px; border: 1px solid var(--h-line); background: #FFFFFF; line-height: 1.65; }
-        .dip-highlights li::before { content: ''; flex: none; width: 8px; height: 8px; margin-top: 9px; background: var(--h-accent); }
-        .dip-lectures { display: flex; flex-direction: column; gap: 10px; }
-        .dip-lecture { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border: 1px solid var(--h-line); color: var(--h-ink); text-decoration: none; }
-        .dip-lecture:hover { border-color: var(--h-brand); }
-        .dip-lecture .dip-play { width: 44px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center; background: var(--h-ink); color: var(--h-accent); }
-        .dip-lecture b { display: block; }
-        .dip-lecture small { color: var(--h-muted); font-size: 13px; }
-        .dip-lecture .fa-arrow-up-right-from-square { margin-inline-start: auto; color: var(--h-muted); }
-        .dip-details { color: var(--h-text-2); white-space: pre-line; margin: 0; }
-        .dip-side { position: sticky; top: 100px; display: flex; flex-direction: column; gap: 16px; }
-        .dip-card { border: 1px solid #D5D2E0; background: #FFFFFF; }
-        .dip-price { background: var(--h-ink); color: #FFFFFF; padding: 24px 26px; background-image: radial-gradient(60% 80% at 0% 0%, rgba(126, 104, 214, .38), rgba(126, 104, 214, 0) 72%), radial-gradient(50% 70% at 100% 100%, rgba(242, 182, 48, .2), rgba(242, 182, 48, 0) 70%); }
-        .dip-price small { display: block; font-size: 13px; color: var(--h-on-dark-2); }
-        .dip-price b { display: block; font-family: var(--h-display); font-size: 34px; line-height: 1.4; }
-        .dip-price b span { font-size: 16px; font-weight: 600; color: var(--h-on-dark); }
-        .dip-price p { margin: 6px 0 0; font-size: 14px; color: var(--h-on-dark); }
-        .dip-card-body { padding: 22px 26px; display: flex; flex-direction: column; gap: 12px; }
-        .dip-card-body .h-link { text-align: center; font-size: 15px; }
-        .dip-start { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--h-text-2); padding-bottom: 12px; border-bottom: 1px solid var(--h-line); }
-        .dip-start b { color: var(--h-ink); }
-        .dip-pay { padding: 20px 26px; }
-        .dip-pay h3 { margin: 0 0 10px; font-size: 16px; }
-        .dip-pay ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 15px; }
-        .dip-pay li { display: flex; gap: 10px; align-items: baseline; overflow-wrap: anywhere; }
-        .dip-pay li i { color: var(--h-brand); }
-        .dip-mobile-bar { display: none; }
-        @media (max-width: 960px) {
-            .dip-body { padding: 32px 0 48px; }
-            .dip-side { position: static; }
-            .dip-block + .dip-block { margin-top: 36px; }
-            .dip-block > h2 { font-size: 21px; }
-            .dip-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .dip-facts div { flex-direction: column; gap: 8px; padding: 14px 0; padding-inline-end: 12px; }
-            .dip-facts i { width: 32px; height: 32px; font-size: 13px; }
-            .dip-facts dd { font-size: 15px; }
-            .dip-mobile-bar { display: flex; align-items: center; gap: 12px; position: fixed; inset-inline: 0; bottom: 0; z-index: 50; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: #FFFFFF; border-top: 1px solid #D5D2E0; }
-            .dip-mobile-bar div { display: flex; flex-direction: column; line-height: 1.3; }
-            .dip-mobile-bar small { font-size: 12px; color: var(--h-muted); }
-            .dip-mobile-bar b { font-family: var(--h-display); font-size: 18px; }
-            .dip-mobile-bar .h-btn { flex: 1; }
-            body.h-has-mobile-bar { padding-bottom: 76px; }
-        }
-    </style>
+    @include('components.site.program-styles')
 </head>
 <body class="h-site h-has-mobile-bar">
     @include('components.site.header')

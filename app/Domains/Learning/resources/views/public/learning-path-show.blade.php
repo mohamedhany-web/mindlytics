@@ -1,828 +1,227 @@
+{{-- صفحة البرنامج التدريبي (AcademicYear) على هوية الموقع. بيانات الدفعة (البداية، المواعيد، المميزات) من لوحة الدبلومات المربوطة بالبرنامج. --}}
 @php
-    $__pageLocale = app()->getLocale();
-    $__pageRtl = $__pageLocale === 'ar';
+    use Illuminate\Support\Str;
+
+    $siteAr = app()->getLocale() === 'ar';
+    $t = fn (string $ar, string $en) => $siteAr ? $ar : $en;
+    $clean = fn ($v) => filled($v) && trim((string) $v) !== '—' ? trim((string) $v) : null;
+    $slug = $learningPath->slug;
+    $price = (float) ($learningPath->price ?? 0);
+    $courses = $learningPath->courses ?? collect();
+    $start = $board?->starts_at ? $board->starts_at->locale(app()->getLocale())->translatedFormat('j F Y') : ($board ? $clean($board->startDisplay()) : null);
+    $video = \App\Support\IntroVideoResolver::resolve($learningPath->video_url ?? '');
+    $summary = filled($board?->summary) ? $board->summary : $learningPath->description;
+    $pending = ! ($isEnrolled ?? false) && ($enrollment ?? null) && $enrollment->status === 'pending';
+
+    $facts = array_values(array_filter([
+        ['icon' => 'fa-calendar-day', 'label' => $t('البداية', 'Starts'), 'value' => $start],
+        ['icon' => 'fa-hourglass-half', 'label' => $t('المدة', 'Duration'), 'value' => $clean($board?->duration)],
+        ['icon' => 'fa-calendar-week', 'label' => $t('أيام المحاضرات', 'Days'), 'value' => $clean($board?->schedule_days)],
+        ['icon' => 'fa-clock', 'label' => $t('ساعات المحاضرة', 'Hours'), 'value' => $clean($board?->hours)],
+        ['icon' => 'fa-laptop-house', 'label' => $t('نظام الدراسة', 'Format'), 'value' => $clean($board?->format)],
+        ['icon' => 'fa-users', 'label' => $t('مناسب لـ', 'For'), 'value' => $clean($board?->audience)],
+        ['icon' => 'fa-chalkboard-user', 'label' => $t('المحاضر', 'Instructor'), 'value' => $clean($board?->instructor_name)],
+        ['icon' => 'fa-layer-group', 'label' => $t('الكورسات', 'Courses'), 'value' => $courses->count() > 0 ? $courses->count().' '.$t('كورس', 'courses') : null],
+    ], fn ($f) => $f['value'] !== null));
+    // المميزات المكتوبة في اللوحة بس (المميزات التلقائية بتكرر «نظرة سريعة»)
+    $highlights = $board && is_array($board->highlights) ? array_values(array_filter($board->highlights)) : [];
+    $chips = array_values(array_filter([
+        $start ? ['label' => $t('تبدأ ', 'Starts ').$start, 'icon' => 'fas fa-calendar-day'] : null,
+        $clean($board?->duration) ? ['label' => $clean($board->duration), 'icon' => 'fas fa-hourglass-half'] : null,
+        $clean($board?->format) ? ['label' => $clean($board->format), 'icon' => 'fas fa-laptop-house'] : null,
+    ]));
+    $consultUrl = route('home').'#consult';
+    $contactUrl = route('public.contact').'?subject='.urlencode($t('استفسار عن برنامج: ', 'Question about: ').$learningPath->name);
+    $siteHideMobileBar = true;
 @endphp
 <!DOCTYPE html>
-<html lang="{{ $__pageLocale }}" dir="{{ $__pageRtl ? 'rtl' : 'ltr' }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
-        <meta name="mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-capable" content="yes">
-        <title>{{ $learningPath->name ?? __('public.learning_path_detail_title') }} - {{ __('public.site_suffix') }}</title>
-        <x-tracking-tags placement="head" />
-
-        <!-- خط عربي أصيل -->
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-        
-        <!-- Tailwind CSS -->
-        <script src="https://cdn.tailwindcss.com"></script>
-        
-        <!-- Alpine.js -->
-        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
-        <!-- Font Awesome -->
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        
-        <!-- Plyr - Custom Video Player -->
-        <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
-        
-        <!-- YouTube IFrame API -->
-        <script src="https://www.youtube.com/iframe_api"></script>
-        
-        @include('layouts.public-styles')
-        
-        <style>
-            * {
-                font-family: 'Cairo', 'Noto Sans Arabic', sans-serif;
-            }
-
-            body {
-                overflow-x: hidden;
-                background: #f8fafc;
-                width: 100%;
-                max-width: 100vw;
-                position: relative;
-                padding-top: 0 !important;
-                margin-top: 0 !important;
-                min-height: 100vh;
-                display: flex;
-                flex-direction: column;
-            }
-            
-            html {
-                margin: 0;
-                padding: 0;
-                overflow-x: hidden;
-                scroll-behavior: smooth;
-            }
-            
-            body > * {
-                flex-shrink: 0;
-            }
-            
-            main {
-                flex: 1 0 auto;
-            }
-
-            * {
-                box-sizing: border-box;
-            }
-
-            /* Enhanced Navbar Styles */
-            .navbar-gradient {
-                background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%);
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1), 0 0 40px rgba(59, 130, 246, 0.2);
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                z-index: 1000;
-                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-                backdrop-filter: blur(20px) saturate(180%);
-                border-bottom: 2px solid rgba(255, 255, 255, 0.2);
-            }
-
-            @keyframes patternShift {
-                0% { background-position: 0 0; }
-                100% { background-position: 20px 20px; }
-            }
-
-            @keyframes gradientFlow {
-                0%, 100% { background-position: 0% 50%; }
-                50% { background-position: 100% 50%; }
-            }
-
-            @keyframes shine {
-                0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
-                100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
-            }
-
-            /* Enhanced Hero Section */
-            .hero-section {
-                background: linear-gradient(to bottom, #f0f9ff, #e0f2fe, #ffffff);
-                position: relative;
-                overflow: hidden;
-            }
-
-            .animated-background {
-                position: absolute;
-                inset: 0;
-                overflow: hidden;
-                z-index: 0;
-                pointer-events: none;
-            }
-
-            /* Floating Circles */
-            .floating-circle {
-                position: absolute;
-                border-radius: 50%;
-                filter: blur(40px);
-                animation: floatCircle 20s ease-in-out infinite;
-                will-change: transform, opacity;
-            }
-
-            .floating-circle.circle-1 {
-                width: 300px;
-                height: 300px;
-                background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(14, 165, 233, 0.2));
-                top: 10%;
-                right: 10%;
-                animation-delay: 0s;
-            }
-
-            .floating-circle.circle-2 {
-                width: 200px;
-                height: 200px;
-                background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(59, 130, 246, 0.2));
-                bottom: 20%;
-                left: 15%;
-                animation-delay: 5s;
-            }
-
-            .floating-circle.circle-3 {
-                width: 250px;
-                height: 250px;
-                background: linear-gradient(135deg, rgba(14, 165, 233, 0.3), rgba(34, 197, 94, 0.2));
-                top: 50%;
-                right: 50%;
-                animation-delay: 10s;
-            }
-
-            @keyframes floatCircle {
-                0%, 100% {
-                    transform: translate(0, 0) scale(1);
-                    opacity: 0.6;
-                }
-                25% {
-                    transform: translate(30px, -30px) scale(1.1);
-                    opacity: 0.8;
-                }
-                50% {
-                    transform: translate(-20px, 20px) scale(0.9);
-                    opacity: 0.7;
-                }
-                75% {
-                    transform: translate(20px, 30px) scale(1.05);
-                    opacity: 0.75;
-                }
-            }
-
-            .fade-in-up {
-                animation: fadeInUp 0.5s ease-out forwards;
-                opacity: 0;
-            }
-
-            @keyframes fadeInUp {
-                from {
-                    opacity: 0;
-                    transform: translateY(20px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-
-            .slide-in-left {
-                animation: slideInLeft 0.6s ease-out forwards;
-                opacity: 0;
-            }
-
-            @keyframes slideInLeft {
-                from {
-                    opacity: 0;
-                    transform: translateX(-30px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateX(0);
-                }
-            }
-
-            .line-clamp-3 {
-                display: -webkit-box;
-                -webkit-line-clamp: 3;
-                -webkit-box-orient: vertical;
-                overflow: hidden;
-            }
-
-            /* مشغل الفيديو المخصص */
-            .custom-video-player-wrapper {
-                position: relative;
-                width: 100%;
-                border-radius: 1rem;
-                overflow: hidden;
-                background: #000;
-            }
-
-            /* تخصيص Plyr Player */
-            .custom-video-player-wrapper .plyr {
-                border-radius: 1rem;
-            }
-
-            .custom-video-player-wrapper .plyr__video-wrapper {
-                background: #000;
-                border-radius: 1rem;
-                position: relative;
-                overflow: hidden;
-            }
-
-            /* إخفاء علامات YouTube من Plyr */
-            .custom-video-player-wrapper .plyr__video-embed {
-                position: relative;
-                overflow: hidden;
-            }
-
-            .custom-video-player-wrapper .plyr__video-embed iframe {
-                border: none;
-                position: relative;
-            }
-
-            /* إخفاء جميع عناصر YouTube */
-            .custom-video-player-wrapper .plyr__video-embed::before,
-            .custom-video-player-wrapper .plyr__video-embed::after {
-                display: none !important;
-            }
-
-            /* حاوية الفيديو 16:9 */
-            .intro-video-container {
-                position: relative;
-                width: 100%;
-                padding-bottom: 56.25%; /* 16:9 */
-                height: 0;
-                background: #000;
-                border-radius: 1rem;
-                overflow: hidden;
-            }
-
-            .intro-video-container iframe {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                border: none;
-            }
-
-            /* تخصيص ألوان المشغل */
-            .custom-video-player-wrapper .plyr__control--overlaid {
-                background: rgba(59, 130, 246, 0.9) !important;
-            }
-
-            .custom-video-player-wrapper .plyr__control--overlaid:hover {
-                background: rgba(37, 99, 235, 0.95) !important;
-            }
-
-            .custom-video-player-wrapper .plyr__progress__played {
-                background: linear-gradient(135deg, #3b82f6 0%, #10b981 100%) !important;
-            }
-
-            .custom-video-player-wrapper .plyr__volume__progress {
-                background: linear-gradient(135deg, #3b82f6 0%, #10b981 100%) !important;
-            }
-
-            .custom-video-player-wrapper .plyr__control.plyr__tab-focus,
-            .custom-video-player-wrapper .plyr__control:hover {
-                background: rgba(59, 130, 246, 0.1) !important;
-            }
-
-            /* Pulse Animation */
-            .pulse-animation {
-                animation: pulse 2s ease-in-out infinite;
-            }
-
-            @keyframes pulse {
-                0%, 100% {
-                    transform: scale(1);
-                    opacity: 1;
-                }
-                50% {
-                    transform: scale(1.05);
-                    opacity: 0.9;
-                }
-            }
-        </style>
-        {{-- هوية الموقع الموحّدة (docs/SITE_DESIGN.md) --}}
+<html lang="{{ app()->getLocale() }}" dir="{{ $siteAr ? 'rtl' : 'ltr' }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ $learningPath->name }} — Mindlytics Academy</title>
+    <meta name="description" content="{{ Str::limit(strip_tags((string) $summary), 160) }}">
+    <meta property="og:title" content="{{ $learningPath->name }} — Mindlytics Academy">
+    <meta property="og:description" content="{{ Str::limit(strip_tags((string) $summary), 200) }}">
+    <x-tracking-tags placement="head" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     @include('components.site.styles')
-    @include('components.site.legacy-theme')
+    @include('components.site.program-styles')
 </head>
-
-<body class="h-site h-has-mobile-bar"
-      x-data="{ mobileMenu: false }"
-      :class="{ 'overflow-hidden': mobileMenu }">
+<body class="h-site h-has-mobile-bar">
     <x-tracking-tags placement="body" />
     @if(is_array(session('analytics_purchase')))
         <x-ecommerce-datalayer :payload="session('analytics_purchase')" />
     @endif
 
     @include('components.site.header')
-    
-    <main class="h-legacy pt-0 mt-0">
-    
-    <!-- Hero Section -->
-    <section class="hero-section relative overflow-hidden min-h-[60vh] flex items-center pt-16 lg:pt-20">
-        <!-- Animated Background -->
-        <div class="animated-background absolute inset-0 overflow-hidden">
-            <!-- Floating Circles -->
-            <div class="floating-circle circle-1"></div>
-            <div class="floating-circle circle-2"></div>
-            <div class="floating-circle circle-3"></div>
-        </div>
-        
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full py-8 lg:py-10">
-            <!-- Breadcrumb -->
-            <nav class="mb-4 text-gray-600 text-sm flex items-center fade-in-up">
-                <a href="{{ url('/') }}" class="hover:text-blue-600 transition-colors">الرئيسية</a>
-                <span class="mx-2 text-gray-400">/</span>
-                <a href="{{ route('public.learning-paths.index') }}" class="hover:text-blue-600 transition-colors">المسارات التعليمية</a>
-                <span class="mx-2 text-gray-400">/</span>
-                <span class="text-gray-900 font-medium">{{ Str::limit($learningPath->name ?? 'المسار', 30) }}</span>
-            </nav>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
-                <!-- Path Info -->
-                <div class="slide-in-left">
-                    <div class="inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-blue-500 to-green-500 rounded-full shadow-md mb-4 fade-in-up">
-                        <i class="fas fa-route text-white text-xs"></i>
-                        <span class="text-white font-bold text-sm">مسار تعليمي شامل</span>
-                    </div>
-                    
-                    <h1 class="text-3xl md:text-4xl lg:text-5xl font-black mb-3 leading-tight text-gray-900 fade-in-up" style="animation-delay: 0.1s;">
-                        {{ $learningPath->name ?? 'اسم المسار' }}
-                    </h1>
-                    
-                    <p class="text-base md:text-lg text-gray-600 mb-5 leading-relaxed fade-in-up" style="animation-delay: 0.2s;">
-                        {{ $learningPath->description ?? 'مسار تعليمي شامل ومتخصص' }}
-                    </p>
+    @include('components.site.page-head', [
+        'eyebrow' => $t('برنامج تدريبي', 'Training program'),
+        'title' => $learningPath->name,
+        'subtitle' => filled($summary) ? Str::limit(strip_tags((string) $summary), 320) : null,
+        'crumbs' => [['label' => $t('البرامج التدريبية', 'Programs'), 'url' => route('public.learning-paths.index')], ['label' => $learningPath->name]],
+        'chips' => $chips,
+    ])
 
-                    <!-- Path Stats -->
-                    <div class="grid grid-cols-3 gap-4 mb-6 fade-in-up" style="animation-delay: 0.1s;">
-                        <div class="bg-white rounded-2xl p-4 text-center border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
-                            <div class="text-3xl font-black text-blue-600 mb-2">{{ $learningPath->courses_count ?? 0 }}</div>
-                            <div class="text-sm text-gray-600 font-medium">كورس</div>
-                        </div>
-                        @php
-                            $totalLessons = ($learningPath->courses ?? collect())->sum('lessons_count') ?? 0;
-                        @endphp
-                        <div class="bg-white rounded-2xl p-4 text-center border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
-                            <div class="text-3xl font-black text-green-600 mb-2">{{ $totalLessons }}</div>
-                            <div class="text-sm text-gray-600 font-medium">درس</div>
-                        </div>
-                        <div class="bg-white rounded-2xl p-4 text-center border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
-                            <div class="text-xl font-black text-gray-700 mb-2">
-                                شامل
-                            </div>
-                            <div class="text-sm text-gray-600 font-medium">المستوى</div>
-                        </div>
-                    </div>
+    <main class="dip-body">
+        <div class="h-wrap h-split">
+            <div class="h-grow">
+                @if(session('success'))<div class="pg-note is-good dip-block">{{ session('success') }}</div>@endif
+                @if(session('info'))<div class="pg-note dip-block">{{ session('info') }}</div>@endif
+                @if(session('error'))<div class="pg-note is-bad dip-block">{{ session('error') }}</div>@endif
 
-                    <!-- CTA Buttons -->
-                    <div class="flex flex-col sm:flex-row gap-4 fade-in-up" style="animation-delay: 0.3s;">
-                        @auth
-                            @if($isEnrolled ?? false)
-                                <a href="{{ route('student.learning-path.show', $learningPath->slug) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                                    <i class="fas fa-play-circle"></i>
-                                    ابدأ التعلم الآن
+                @if(in_array($video['type'], ['youtube', 'vimeo', 'bunny_embed'], true) && ! empty($video['embed']))
+                    <section class="dip-block" aria-label="{{ $t('فيديو تعريفي', 'Intro video') }}">
+                        <div class="pg-video"><iframe src="{{ $video['embed'] }}" title="{{ $learningPath->name }}" loading="lazy" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe></div>
+                    </section>
+                @elseif($video['type'] === 'html5' && ! empty($video['direct']))
+                    <section class="dip-block" aria-label="{{ $t('فيديو تعريفي', 'Intro video') }}">
+                        <div class="pg-video"><video src="{{ $video['direct'] }}" controls preload="metadata" playsinline></video></div>
+                    </section>
+                @endif
+
+                @if($facts !== [])
+                    <section class="dip-block" aria-labelledby="pg-facts">
+                        <h2 id="pg-facts">{{ $t('نظرة سريعة', 'At a glance') }}</h2>
+                        <dl class="dip-facts">
+                            @foreach($facts as $f)
+                                <div><i class="fas {{ $f['icon'] }}" aria-hidden="true"></i><span><dt>{{ $f['label'] }}</dt><dd>{{ $f['value'] }}</dd></span></div>
+                            @endforeach
+                        </dl>
+                    </section>
+                @endif
+
+                @if(filled($learningPath->description) && trim(strip_tags((string) $learningPath->description)) !== trim(strip_tags((string) $summary)))
+                    <section class="dip-block" aria-labelledby="pg-about">
+                        <h2 id="pg-about">{{ $t('عن البرنامج', 'About the program') }}</h2>
+                        <p class="dip-details">{{ $learningPath->description }}</p>
+                    </section>
+                @endif
+
+                @if($highlights !== [])
+                    <section class="dip-block" aria-labelledby="pg-highlights">
+                        <h2 id="pg-highlights">{{ $t('هتتعلّم وهتاخد إيه', 'What you get') }}</h2>
+                        <ul class="dip-highlights">@foreach($highlights as $item)<li>{{ $item }}</li>@endforeach</ul>
+                    </section>
+                @endif
+
+                @if($courses->isNotEmpty())
+                    <section class="dip-block" aria-labelledby="pg-courses">
+                        <h2 id="pg-courses">{{ $t('محتوى البرنامج', 'Curriculum') }}</h2>
+                        <div class="pg-curriculum">
+                            @foreach($courses as $i => $course)
+                                <a href="{{ route('public.course.show', $course->id) }}">
+                                    <span class="pg-num">{{ $loop->iteration }}</span>
+                                    <span><b>{{ $course->title }}</b>
+                                        <small>{{ collect([$course->academicSubject?->name, ($course->lessons_count ?? 0) > 0 ? $course->lessons_count.' '.$t('درس', 'lessons') : null])->filter()->implode(' · ') }}</small></span>
                                 </a>
-                            @elseif(isset($enrollment) && $enrollment->status === 'pending')
-                                <div class="inline-flex items-center justify-center gap-2 bg-yellow-100 text-yellow-800 px-6 py-3 rounded-full font-bold text-base border-2 border-yellow-300">
-                                    <i class="fas fa-clock"></i>
-                                    طلبك قيد المراجعة
-                                </div>
-                            @else
-                                @if(($learningPath->price ?? 0) > 0)
-                                    <a href="{{ route('public.learning-path.checkout', Str::slug($learningPath->name)) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                                        <i class="fas fa-shopping-cart"></i>
-                                        اشترك في المسار
-                                    </a>
-                                @else
-                                    <form action="{{ route('public.learning-path.enroll.free', Str::slug($learningPath->name)) }}" method="POST" class="inline">
-                                        @csrf
-                                        <button type="submit" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                                            <i class="fas fa-user-plus"></i>
-                                            اشترك مجاناً
-                                        </button>
-                                    </form>
-                                @endif
-                            @endif
-                        @endauth
-                        @guest
-                            <a href="{{ route('register') }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                                <i class="fas fa-user-plus"></i>
-                                سجل للاشتراك
-                            </a>
-                        @endguest
-                        <a href="{{ route('public.learning-paths.index') }}" class="inline-flex items-center justify-center gap-2 bg-white text-blue-600 px-6 py-3 rounded-full font-bold text-base border-2 border-blue-600 hover:bg-blue-50 transition-all duration-300">
-                            <i class="fas fa-arrow-right"></i>
-                            جميع المسارات
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Video Introduction Section (Moved from top) -->
-                <div class="relative fade-in-up max-w-xl" style="animation-delay: 0.2s;">
-                    @if($learningPath->video_url ?? null)
-                    <div class="bg-white rounded-2xl p-4 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300">
-                        <div class="text-center mb-3">
-                            <h2 class="text-lg font-bold text-gray-900 mb-0.5 flex items-center justify-center gap-2">
-                                <i class="fas fa-play-circle text-blue-600 text-base"></i>
-                                {{ __('public.path_intro_card_title') }}
-                            </h2>
-                            <p class="text-gray-500 text-sm">{{ __('public.path_intro_card_sub') }}</p>
-                        </div>
-                        @php
-                            $pathIntroVideoUrl = trim((string) ($learningPath->video_url ?? ''));
-                        @endphp
-                        @include('partials.intro-video-embed', [
-                            'url' => $pathIntroVideoUrl,
-                            'title' => __('public.path_intro_video_title'),
-                        ])
-                    </div>
-                    @else
-                    <div class="bg-white rounded-2xl p-4 shadow-lg border border-gray-200">
-                        <div class="text-center text-gray-500 py-6">
-                            <i class="fas fa-video text-2xl mb-2 text-gray-300"></i>
-                            <p class="text-sm">{{ __('public.no_intro_video') }}</p>
-                        </div>
-                    </div>
-                    @endif
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Path Details Section -->
-    <section class="py-12 md:py-16 bg-gradient-to-b from-gray-50 via-white to-gray-50 relative z-10">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-                <!-- Main Content -->
-                <div class="lg:col-span-2 space-y-6">
-                    <!-- About Path -->
-                    <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 lg:p-8 border border-gray-200 fade-in-up">
-                        <h2 class="text-2xl lg:text-3xl font-black text-gray-900 mb-6 flex items-center gap-3">
-                            <i class="fas fa-info-circle text-blue-600"></i>
-                            {{ __('public.about_path') }}
-                        </h2>
-                        <div class="prose max-w-none text-gray-700 leading-relaxed">
-                            @if($learningPath->description && trim($learningPath->description) !== '')
-                                <p class="text-lg mb-4">{{ $learningPath->description }}</p>
-                            @else
-                                <p class="text-lg mb-4">{{ __('public.path_description_fallback_long') }}</p>
-                                <div class="bg-gradient-to-br from-blue-50 to-green-50 rounded-xl p-6 border border-blue-100 mt-6">
-                                    <h3 class="text-xl font-bold text-gray-900 mb-4">{{ __('public.path_highlights_title') }}</h3>
-                                    <ul class="space-y-3 text-gray-700">
-                                        <li class="flex items-start gap-3">
-                                            <i class="fas fa-check-circle text-green-600 mt-1"></i>
-                                            <span>{{ __('public.path_highlight_1') }}</span>
-                                        </li>
-                                        <li class="flex items-start gap-3">
-                                            <i class="fas fa-check-circle text-green-600 mt-1"></i>
-                                            <span>{{ __('public.path_highlight_2') }}</span>
-                                        </li>
-                                        <li class="flex items-start gap-3">
-                                            <i class="fas fa-check-circle text-green-600 mt-1"></i>
-                                            <span>{{ __('public.path_highlight_3') }}</span>
-                                        </li>
-                                        <li class="flex items-start gap-3">
-                                            <i class="fas fa-check-circle text-green-600 mt-1"></i>
-                                            <span>{{ __('public.path_highlight_4') }}</span>
-                                        </li>
-                                    </ul>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-
-                    <!-- Courses in Path -->
-                    @if($learningPath->courses && $learningPath->courses->count() > 0)
-                    <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 lg:p-8 border border-gray-200 fade-in-up" style="animation-delay: 0.1s;">
-                        <h2 class="text-2xl lg:text-3xl font-black text-gray-900 mb-6 flex items-center gap-3">
-                            <i class="fas fa-graduation-cap text-blue-600"></i>
-                            {{ __('public.courses_in_path') }}
-                        </h2>
-                        <div class="space-y-4">
-                            @foreach($learningPath->courses as $index => $course)
-                            <div class="flex items-start gap-4 p-5 bg-gradient-to-r from-blue-50 to-green-50 rounded-xl border border-blue-100 hover:border-blue-300 transition-all duration-300 hover:shadow-md group">
-                                <div class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-600 to-green-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg group-hover:scale-110 transition-transform duration-300">
-                                    {{ $index + 1 }}
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <h3 class="text-lg font-black text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
-                                        {{ $course->localized('title') }}
-                                    </h3>
-                                    <p class="text-gray-600 text-sm mb-3 line-clamp-2">
-                                        {{ Str::limit($course->localized('description') ?: __('public.course_fallback_short'), 100) }}
-                                    </p>
-                                    <div class="flex items-center gap-4 flex-wrap">
-                                        @if($course->lessons_count > 0)
-                                        <div class="flex items-center gap-2 text-sm text-gray-600">
-                                            <i class="fas fa-play-circle text-blue-600"></i>
-                                            <span>{{ $course->lessons_count }} {{ __('public.lesson_single') }}</span>
-                                        </div>
-                                        @endif
-                                        @if($course->academicSubject)
-                                        <div class="flex items-center gap-2 text-sm text-gray-600">
-                                            <i class="fas fa-book text-green-600"></i>
-                                            <span>{{ $course->academicSubject->name }}</span>
-                                        </div>
-                                        @endif
-                                        @if(($course->price ?? 0) > 0)
-                                        <div class="flex items-center gap-2 text-sm font-bold text-blue-600">
-                                            <i class="fas fa-tag"></i>
-                                            <span>{{ number_format($course->price, 0) }} {{ __('public.currency_egp') }}</span>
-                                        </div>
-                                        @else
-                                        <div class="flex items-center gap-2 text-sm font-bold text-green-600">
-                                            <i class="fas fa-gift"></i>
-                                            <span>{{ __('public.free_price') }}</span>
-                                        </div>
-                                        @endif
-                                    </div>
-                                </div>
-                                <div class="flex-shrink-0">
-                                    <a href="{{ route('public.course.show', $course->id) }}" class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105">
-                                        <span>{{ __('public.view_btn') }}</span>
-                                        <i class="fas fa-arrow-left text-xs"></i>
-                                    </a>
-                                </div>
-                            </div>
                             @endforeach
                         </div>
-                    </div>
-                    @endif
-                </div>
-
-                <!-- Sidebar -->
-                <div class="lg:col-span-1">
-                    <div class="space-y-6 sticky top-24">
-                        <!-- Path Info Card -->
-                        <div class="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 p-6 lg:p-8 border-2 border-gray-100 hover:border-blue-200 relative overflow-hidden group">
-                            <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-100/50 to-green-100/50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                            
-                            <div class="relative z-10">
-                                <h3 class="text-2xl font-black text-gray-900 mb-6 text-center">{{ __('public.path_info_title') }}</h3>
-                            
-                                <div class="space-y-3">
-                                    <div class="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-xl border-2 border-blue-100">
-                                        <span class="text-gray-700 font-semibold">{{ __('public.path_courses_count_label') }}</span>
-                                        <span class="font-black text-gray-900 text-lg">{{ $learningPath->courses_count ?? 0 }}</span>
-                                    </div>
-                                    
-                                    <div class="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border-2 border-green-100">
-                                        <span class="text-gray-700 font-semibold">{{ __('public.path_total_lessons') }}</span>
-                                        <span class="font-black text-gray-900 text-lg">{{ $totalLessons }}</span>
-                                    </div>
-                                    
-                                    @php
-                                        $freeCourses = ($learningPath->courses ?? collect())->filter(function($course) {
-                                            return ($course->price ?? 0) == 0;
-                                        })->count();
-                                        $paidCourses = ($learningPath->courses ?? collect())->filter(function($course) {
-                                            return ($course->price ?? 0) > 0;
-                                        })->count();
-                                    @endphp
-                                    
-                                    <div class="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border-2 border-purple-100">
-                                        <span class="text-gray-700 font-semibold">{{ __('public.path_free_courses') }}</span>
-                                        <span class="font-black text-gray-900 text-lg">{{ $freeCourses }}</span>
-                                    </div>
-                                    
-                                    <div class="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-blue-50 rounded-xl border-2 border-orange-100">
-                                        <span class="text-gray-700 font-semibold">{{ __('public.path_paid_courses') }}</span>
-                                        <span class="font-black text-gray-900 text-lg">{{ $paidCourses }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Subscription Card -->
-                        <div class="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 p-6 lg:p-8 border-2 border-gray-100 hover:border-blue-200 relative overflow-hidden group">
-                            <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-100/50 to-green-100/50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                            
-                            <div class="relative z-10">
-                                <div class="text-center mb-6">
-                                    <div class="w-16 h-16 bg-gradient-to-br from-blue-600 to-green-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                                        <i class="fas fa-user-plus text-white text-2xl"></i>
-                                    </div>
-                                    <h3 class="text-xl font-black text-gray-900 mb-2">{{ __('public.subscribe_path') }}</h3>
-                                </div>
-                                
-                                <!-- Price: سعر المسار مستقل عن أسعار الكورسات -->
-                                <div class="text-center mb-6">
-                                    <p class="text-xs text-gray-500 mb-1">سعر الاشتراك في المسار</p>
-                                    @if(($learningPath->price ?? 0) > 0)
-                                        <div class="text-3xl font-black text-blue-600 mb-1">{{ number_format($learningPath->price, 0) }} <span class="text-lg text-gray-600">{{ __('public.currency_egp') }}</span></div>
-                                    @else
-                                        <div class="text-3xl font-black text-green-600 mb-1">{{ __('public.free_price') }}</div>
-                                    @endif
-                                </div>
-
-                                <!-- Path Features -->
-                                <div class="space-y-2 mb-6">
-                                    <div class="flex items-center gap-2 text-sm text-gray-700">
-                                        <i class="fas fa-check-circle text-green-500"></i>
-                                        <span>{{ __('public.lifetime_access') }}</span>
-                                    </div>
-                                    <div class="flex items-center gap-2 text-sm text-gray-700">
-                                        <i class="fas fa-check-circle text-green-500"></i>
-                                        <span>{{ __('public.certificate_on_completion') }}</span>
-                                    </div>
-                                    <div class="flex items-center gap-2 text-sm text-gray-700">
-                                        <i class="fas fa-check-circle text-green-500"></i>
-                                        <span>{{ __('public.practical_projects') }}</span>
-                                    </div>
-                                    <div class="flex items-center gap-2 text-sm text-gray-700">
-                                        <i class="fas fa-check-circle text-green-500"></i>
-                                        <span>{{ __('public.direct_support') }}</span>
-                                    </div>
-                                </div>
-
-                                <!-- CTA Button -->
-                                <div class="mt-6">
-                                    @auth
-                                        @if($isEnrolled ?? false)
-                                            <a href="{{ route('student.learning-path.show', $learningPath->slug) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 w-full">
-                                                <i class="fas fa-play"></i>
-                                                {{ __('public.start_now') }}
-                                            </a>
-                                        @elseif(isset($enrollment) && $enrollment->status === 'pending')
-                                            <div class="inline-flex items-center justify-center gap-2 bg-yellow-100 text-yellow-800 px-6 py-3 rounded-xl font-bold text-sm border-2 border-yellow-300 w-full">
-                                                <i class="fas fa-clock"></i>
-                                                {{ __('public.enrollment_pending') }}
-                                            </div>
-                                        @else
-                                            @if(($learningPath->price ?? 0) > 0)
-                                                <a href="{{ route('public.learning-path.checkout', Str::slug($learningPath->name)) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 w-full">
-                                                    <i class="fas fa-shopping-cart"></i>
-                                                    {{ __('public.subscribe_path_btn') }}
-                                                </a>
-                                            @else
-                                                <form action="{{ route('public.learning-path.enroll.free', Str::slug($learningPath->name)) }}" method="POST" class="mb-3">
-                                                    @csrf
-                                                    <button type="submit" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 w-full">
-                                                        <i class="fas fa-user-plus"></i>
-                                                        {{ __('public.enroll_free') }}
-                                                    </button>
-                                                </form>
-                                            @endif
-                                        @endif
-                                    @endauth
-                                    @guest
-                                        <a href="{{ route('register') }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 w-full">
-                                            <i class="fas fa-user-plus"></i>
-                                            {{ __('public.register_to_enroll') }}
-                                        </a>
-                                    @endguest
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Reviews -->
-    <section class="py-10 bg-gradient-to-b from-gray-50 via-white to-gray-50 relative z-10">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-                <div class="flex items-start justify-between gap-4 mb-4">
-                    <div>
-                        <h2 class="text-2xl font-black text-gray-900">التقييمات والمراجعات</h2>
-                        <p class="text-sm text-gray-600 mt-1">
-                            <span class="font-bold text-yellow-600">{{ number_format((float) ($reviewsAvg ?? 0), 1) }}</span>
-                            <span class="text-gray-400">/ 5</span>
-                            <span class="text-gray-500">— ({{ number_format((int) ($reviewsCount ?? 0)) }} مراجعة)</span>
-                        </p>
-                    </div>
-                </div>
-
-                @if(session('success'))
-                    <div class="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold">
-                        {{ session('success') }}
-                    </div>
-                @endif
-                @if($errors->any())
-                    <div class="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm">
-                        {{ $errors->first() }}
-                    </div>
+                    </section>
                 @endif
 
-                @auth
-                    @if($isEnrolled ?? false)
-                        <form action="{{ route('public.learning-path.reviews.store', $learningPath->slug) }}" method="POST" class="mb-6 space-y-3">
-                            @csrf
-                            <div>
-                                <label class="block text-sm font-bold text-gray-800 mb-2">تقييمك <span class="text-rose-500">*</span></label>
-                                <select name="rating" required class="w-full max-w-md rounded-xl border border-slate-200 px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500">
-                                    <option value="">اختر التقييم</option>
-                                    @for($i=5; $i>=1; $i--)
-                                        <option value="{{ $i }}" @selected((string) old('rating') === (string) $i)>{{ $i }} / 5</option>
-                                    @endfor
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-bold text-gray-800 mb-2">اكتب مراجعتك <span class="text-rose-500">*</span></label>
-                                <textarea name="comment" rows="3" required class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500" placeholder="شارك رأيك في المسار">{{ old('comment') }}</textarea>
-                            </div>
-                            <button type="submit" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all">
-                                <i class="fas fa-paper-plane"></i>
-                                نشر
-                            </button>
-                        </form>
-                    @else
-                        <div class="mb-6 p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-sm font-semibold">
-                            يجب أن تكون مشتركاً في المسار لتتمكن من إضافة تقييم.
-                        </div>
-                    @endif
-                @endauth
-                @guest
-                    <div class="mb-6 p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-sm font-semibold">
-                        <a class="text-blue-700 hover:underline" href="{{ route('login', ['redirect' => url()->current()]) }}">سجّل دخولك</a>
-                        لإضافة تقييم.
-                    </div>
-                @endguest
+                @if(filled($board?->landing_details))
+                    <section class="dip-block" aria-labelledby="pg-more">
+                        <h2 id="pg-more">{{ $t('معلومات إضافية', 'More details') }}</h2>
+                        <p class="dip-details">{{ $board->landing_details }}</p>
+                    </section>
+                @endif
 
-                @if(isset($approvedReviews) && $approvedReviews->count() > 0)
-                    <div class="space-y-4">
+                @if(($reviewsCount ?? 0) > 0 || ($isEnrolled ?? false))
+                    <section class="dip-block" aria-labelledby="pg-reviews">
+                        <h2 id="pg-reviews">{{ $t('آراء الطلاب', 'Student reviews') }} @if(($reviewsCount ?? 0) > 0)<span class="pg-stars" aria-label="{{ number_format($reviewsAvg, 1) }} / 5">{{ str_repeat('★', (int) round($reviewsAvg)) }}</span> <small style="font-size: 15px; color: var(--h-muted)">({{ $reviewsCount }})</small>@endif</h2>
+                        @if($errors->any())<div class="pg-note is-bad" style="margin-bottom: 16px">{{ $errors->first() }}</div>@endif
+                        @if($isEnrolled ?? false)
+                            <form action="{{ route('public.learning-path.reviews.store', $slug) }}" method="POST" class="h-boxform" style="margin-bottom: 20px">
+                                @csrf
+                                <label class="h-field">{{ $t('تقييمك', 'Your rating') }}
+                                    <select name="rating" required><option value="">{{ $t('اختار', 'Choose') }}</option>@for($i = 5; $i >= 1; $i--)<option value="{{ $i }}" @selected((string) old('rating') === (string) $i)>{{ str_repeat('★', $i) }} ({{ $i }}/5)</option>@endfor</select>
+                                </label>
+                                <label class="h-field">{{ $t('رأيك في البرنامج', 'Your review') }}<textarea name="comment" rows="3" required>{{ old('comment') }}</textarea></label>
+                                <button type="submit" class="h-btn h-btn-primary">{{ $t('نشر التقييم', 'Post review') }}</button>
+                            </form>
+                        @endif
                         @foreach($approvedReviews as $r)
-                            <div class="p-4 rounded-xl border border-gray-200 bg-gray-50">
-                                <div class="flex items-center justify-between gap-3">
-                                    <div class="font-bold text-gray-900 text-sm">{{ $r->user->name ?? 'طالب' }}</div>
-                                    <div class="flex items-center gap-1 text-xs">
-                                        @for($i = 1; $i <= 5; $i++)
-                                            <i class="fas fa-star {{ $i <= (int) $r->rating ? 'text-yellow-400' : 'text-gray-300' }}"></i>
-                                        @endfor
-                                    </div>
+                            <article class="pg-review">
+                                <header><span>{{ $r->user->name ?? $t('طالب', 'Student') }}</span><span class="pg-stars" aria-label="{{ (int) $r->rating }} / 5">{{ str_repeat('★', (int) $r->rating) }}</span></header>
+                                <p>{{ $r->comment }}</p>
+                            </article>
+                        @endforeach
+                    </section>
+                @endif
+            </div>
+
+            <aside class="h-side dip-side" aria-label="{{ $t('الرسوم والتسجيل', 'Fees and enrolment') }}">
+                <div class="dip-card">
+                    <div class="dip-price">
+                        <small>{{ $t('رسوم البرنامج', 'Program fee') }}</small>
+                        @if($price > 0)
+                            <b>{{ number_format($price, 0) }} <span>{{ $t('ج.م', 'EGP') }}</span></b>
+                            @if($board?->price_recorded && (float) $board->price_recorded > 0)<p>{{ $t('النسخة المسجّلة: ', 'Recorded edition: ') }}{{ number_format((float) $board->price_recorded, 0) }} {{ $t('ج.م', 'EGP') }}</p>@endif
+                        @else
+                            <b>{{ $t('مجاني', 'Free') }}</b>
+                        @endif
+                    </div>
+                    <div class="dip-card-body">
+                        @if($start)<div class="dip-start"><span>{{ $t('أقرب دفعة', 'Next intake') }}</span><b>{{ $start }}</b></div>@endif
+                        @if($isEnrolled ?? false)
+                            <a href="{{ route('student.learning-path.show', $slug) }}" class="h-btn h-btn-primary h-btn-lg h-btn-block">{{ $t('ادخل على البرنامج', 'Go to the program') }}</a>
+                        @elseif($pending)
+                            <div class="pg-note">{{ $t('طلب اشتراكك قيد المراجعة، وهنكلمك قريب.', 'Your enrolment request is under review.') }}</div>
+                        @elseif($price > 0)
+                            <a href="{{ route('public.learning-path.checkout', $slug) }}" class="h-btn h-btn-primary h-btn-lg h-btn-block">{{ $t('سجّل وادفع أونلاين', 'Enrol and pay online') }}</a>
+                        @else
+                            @auth
+                                <form action="{{ route('public.learning-path.enroll.free', $slug) }}" method="POST">@csrf<button type="submit" class="h-btn h-btn-primary h-btn-lg h-btn-block">{{ $t('اشترك مجاناً', 'Enrol for free') }}</button></form>
+                            @else
+                                <a href="{{ route('register') }}" class="h-btn h-btn-primary h-btn-lg h-btn-block">{{ $t('اعمل حساب واشترك', 'Sign up to enrol') }}</a>
+                            @endauth
+                        @endif
+                        <a href="{{ $consultUrl }}" data-program="{{ $learningPath->name }}" class="h-btn h-btn-outline h-btn-block">{{ $t('احجز استشارة قبل ما تقرر', 'Book a consultation first') }}</a>
+                        <a href="{{ $contactUrl }}" class="h-link">{{ $t('اسأل فريق القبول', 'Ask admissions') }}</a>
+                    </div>
+                    @if($board && $board->bookingMethodList() !== [])
+                        <div class="dip-pay" style="border-top: 1px solid var(--h-line)">
+                            <h3>{{ $t('طرق الدفع الأخرى', 'Other ways to pay') }}</h3>
+                            <ul>@foreach($board->bookingMethodList() as $m)<li><i class="fas fa-wallet" aria-hidden="true"></i><span>{{ $m }}</span></li>@endforeach</ul>
+                        </div>
+                    @endif
+                </div>
+            </aside>
+        </div>
+
+        @if(isset($relatedPaths) && $relatedPaths->isNotEmpty())
+            <section class="h-section h-section-mist" style="margin-top: 72px; padding: 64px 0">
+                <div class="h-wrap">
+                    <h2 class="h-h2" style="margin-bottom: 24px">{{ $t('برامج تانية ممكن تناسبك', 'Other programs') }}</h2>
+                    <div class="pg-grid">
+                        @foreach($relatedPaths as $p)
+                            <a href="{{ route('public.learning-path.show', $p->slug) }}" class="pg-tile">
+                                <div class="pg-tile-body">
+                                    <h3>{{ $p->name }}</h3>
+                                    @if(filled($p->description))<p>{{ Str::limit(strip_tags((string) $p->description), 120) }}</p>@endif
+                                    <div class="pg-tile-foot"><b>{{ $p->price > 0 ? number_format($p->price, 0).' '.$t('ج.م', 'EGP') : $t('مجاني', 'Free') }}</b><span class="h-link">{{ $t('التفاصيل', 'Details') }}</span></div>
                                 </div>
-                                <div class="text-gray-700 text-sm mt-2 whitespace-pre-wrap">{{ $r->comment ?? '' }}</div>
-                                <div class="text-xs text-gray-400 mt-2">{{ $r->created_at?->format('Y-m-d') }}</div>
-                            </div>
+                            </a>
                         @endforeach
                     </div>
-                @else
-                    <div class="text-sm text-gray-500">لا توجد مراجعات منشورة بعد.</div>
-                @endif
-            </div>
-        </div>
-    </section>
-
-    <!-- Related Paths -->
-    @if(isset($relatedPaths) && $relatedPaths->count() > 0)
-    <section class="py-12 md:py-16 bg-gradient-to-b from-gray-50 via-white to-gray-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-12 fade-in-up">
-                <h2 class="text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-4">
-                    {{ __('public.related_paths_title') }} <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500">{{ __('public.related_paths_highlight') }}</span>
-                </h2>
-                <p class="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">{{ __('public.explore_more_paths') }}</p>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-                @foreach($relatedPaths as $index => $path)
-                <div class="bg-white rounded-3xl shadow-xl overflow-hidden border-2 border-gray-200 hover:border-blue-300 transition-all duration-300 hover:shadow-2xl group h-full">
-                    <div class="h-48 bg-gradient-to-br flex items-center justify-center relative overflow-hidden
-                        @if($loop->index % 3 == 0) from-sky-400 via-sky-500 to-sky-600
-                        @elseif($loop->index % 3 == 1) from-blue-500 via-blue-600 to-blue-700
-                        @else from-indigo-500 via-indigo-600 to-indigo-700
-                        @endif">
-                        <div class="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-300"></div>
-                        <i class="fas fa-route text-white text-6xl pulse-animation relative z-10 group-hover:scale-110 transition-transform duration-300"></i>
-                    </div>
-                    
-                    <div class="p-6 bg-white flex-grow flex flex-col">
-                        <h3 class="text-xl font-black text-gray-900 mb-3 group-hover:text-sky-600 transition-colors">
-                            {{ $path->name }}
-                        </h3>
-                        <p class="text-gray-600 mb-4 text-sm leading-relaxed line-clamp-2">
-                            {{ Str::limit($path->description ?? __('public.path_description_fallback'), 80) }}
-                        </p>
-                        
-                        <div class="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
-                            <div>
-                                <span class="text-2xl font-black text-sky-600">{{ number_format($path->price ?? 0, 0) }}</span>
-                                <span class="text-sm text-gray-500">{{ __('public.currency_egp') }}</span>
-                            </div>
-                            <a href="{{ route('public.learning-path.show', $path->slug) }}" class="bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 text-white px-4 py-2 rounded-xl font-bold text-sm transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1">
-                                <i class="fas fa-eye ml-2"></i>
-                                {{ __('public.view_btn') }}
-                            </a>
-                        </div>
-                    </div>
                 </div>
-                @endforeach
-            </div>
-        </div>
-    </section>
-    @endif
-
+            </section>
+        @endif
     </main>
-    
-    <!-- Unified Footer -->
+
+    <div class="dip-mobile-bar">
+        <div><small>{{ $t('الرسوم', 'Fee') }}</small><b>{{ $price > 0 ? number_format($price, 0).' '.$t('ج.م', 'EGP') : $t('مجاني', 'Free') }}</b></div>
+        @if($isEnrolled ?? false)
+            <a href="{{ route('student.learning-path.show', $slug) }}" class="h-btn h-btn-primary">{{ $t('ادخل على البرنامج', 'Go to the program') }}</a>
+        @elseif($price > 0 && ! $pending)
+            <a href="{{ route('public.learning-path.checkout', $slug) }}" class="h-btn h-btn-primary">{{ $t('سجّل الآن', 'Enrol now') }}</a>
+        @else
+            <a href="{{ $consultUrl }}" data-program="{{ $learningPath->name }}" class="h-btn h-btn-primary">{{ $t('احجز استشارة', 'Book a consultation') }}</a>
+        @endif
+    </div>
+
     @include('components.site.footer')
-    
 </body>
 </html>

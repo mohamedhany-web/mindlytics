@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Domains\Learning\Models\AcademicSubject;
 use App\Domains\Learning\Models\AdvancedCourse;
 use App\Domains\Accounting\Models\Package;
+use App\Domains\Sales\Models\SalesCourseBoardEntry;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -103,6 +104,11 @@ class CourseCatalogController extends Controller
             ->publicCatalog()
             ->count();
 
-        return view('learning::public.courses', compact('courses', 'packages', 'subjects', 'filters', 'totalPublic'));
+        // الكورسات اللي ليها دفعات جاية (لوحة الكورسات في المبيعات): الأقرب ميعاداً أولاً
+        $intakes = SalesCourseBoardEntry::query()->active()->with('advancedCourse')->ordered()->get()
+            ->sortBy(fn (SalesCourseBoardEntry $e) => $e->starts_at?->timestamp ?? PHP_INT_MAX)
+            ->values();
+
+        return view('learning::public.courses', compact('courses', 'packages', 'subjects', 'filters', 'totalPublic', 'intakes'));
     }
 }

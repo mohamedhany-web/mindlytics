@@ -9,6 +9,7 @@ use App\Domains\Learning\Models\StudentCourseEnrollment;
 use App\Domains\Learning\Models\LearningPathEnrollment;
 use App\Domains\Accounting\Models\Order;
 use App\Domains\Learning\Models\LearningPathReview;
+use App\Domains\Sales\Models\SalesDiplomaBoardEntry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -121,7 +122,10 @@ class LearningPathController extends Controller
             ];
         })->values()->all();
 
-        return view('learning::public.learning-paths', compact('learningPaths', 'featuredCourses', 'pathsForSearch'));
+        // بيانات الدفعة (البداية والمواعيد والنظام) من لوحة الدبلومات المربوطة بكل برنامج
+        $boards = $this->boardsByYear();
+
+        return view('learning::public.learning-paths', compact('learningPaths', 'featuredCourses', 'pathsForSearch', 'boards'));
     }
 
     /**
@@ -242,7 +246,10 @@ class LearningPathController extends Controller
             ->where('is_approved', true)
             ->count();
         
+        $board = $this->boardsByYear()->get($academicYear->id);
+
         return view('learning::public.learning-path-show', compact(
+            'board',
             'learningPath',
             'relatedPaths',
             'isEnrolled',
@@ -251,6 +258,19 @@ class LearningPathController extends Controller
             'reviewsAvg',
             'reviewsCount'
         ));
+    }
+
+    /**
+     * أقرب دفعة نشطة في لوحة الدبلومات لكل برنامج (academic_year_id => entry).
+     *
+     * @return \Illuminate\Support\Collection<int, SalesDiplomaBoardEntry>
+     */
+    private function boardsByYear(): \Illuminate\Support\Collection
+    {
+        return SalesDiplomaBoardEntry::query()->active()->whereNotNull('academic_year_id')->ordered()->get()
+            ->sortBy(fn (SalesDiplomaBoardEntry $e) => $e->starts_at?->timestamp ?? PHP_INT_MAX)
+            ->unique('academic_year_id')
+            ->keyBy('academic_year_id');
     }
 
     /**
