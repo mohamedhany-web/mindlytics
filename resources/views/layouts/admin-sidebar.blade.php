@@ -630,6 +630,26 @@
                 </ul>
             </li>
 
+            {{-- الإرشاد المهني (docs/ADVISING.md) --}}
+            <li>
+                @php
+                    try {
+                        $advisingNew = \Illuminate\Support\Facades\Schema::hasTable('advising_bookings') ? \App\Domains\Advising\Models\AdvisingBooking::where('status', 'pending')->count() : 0;
+                    } catch (\Throwable $e) {
+                        $advisingNew = 0;
+                    }
+                @endphp
+                <a href="{{ route('admin.advising.bookings') }}"
+                   @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                   class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group {{ request()->routeIs('admin.advising.*') ? 'bg-violet-600/30 text-white font-semibold' : '' }}">
+                    <span class="flex items-center gap-3">
+                        <i class="fas fa-compass w-5 text-violet-400 group-hover:text-white"></i>
+                        <span class="font-medium">الإرشاد المهني</span>
+                    </span>
+                    @if($advisingNew > 0)<span class="min-w-[20px] h-5 px-1.5 rounded-full bg-amber-400 text-slate-900 text-xs font-bold flex items-center justify-center">{{ $advisingNew }}</span>@endif
+                </a>
+            </li>
+
             @php
                 $scholarshipsMenuOpen = request()->routeIs('admin.scholarships.*');
             @endphp

@@ -2,13 +2,12 @@
 
 namespace Tests\Smoke;
 
-use App\Domains\Cms\Models\ContactMessage;
 use App\Domains\Sales\Models\SalesCourseBoardEntry;
 use App\Domains\Sales\Models\SalesDiplomaBoardEntry;
 
 /**
  * الصفحة الرئيسية الجديدة (docs/HOMEPAGE.md): بالعربي من لوحة الدبلومات والكورسات، والإنجليزي على الصفحة القديمة،
- * وفورم الاستشارة بيوصل لرسائل «تواصل معنا».
+ * وحجز الاستشارة بقى بوب أب الإرشاد المهني (tests/Smoke/AdvisingSmokeTest.php).
  */
 class HomePageSmokeTest extends SmokeTestCase
 {
@@ -69,13 +68,4 @@ class HomePageSmokeTest extends SmokeTestCase
             ->assertSee('h-hero', false);
     }
 
-    public function test_consultation_form_reaches_contact_messages(): void
-    {
-        $this->post('/contact', [
-            'name' => 'Smoke Visitor', 'email' => 'smoke-visitor@example.test', 'phone' => '01000000000',
-            'subject' => 'طلب استشارة أكاديمية — الصفحة الرئيسية', 'message' => 'طلب استشارة أكاديمية من الصفحة الرئيسية. البرنامج: Smoke',
-        ])->assertRedirect();
-
-        $this->assertTrue(ContactMessage::where('email', 'smoke-visitor@example.test')->exists());
-    }
 }

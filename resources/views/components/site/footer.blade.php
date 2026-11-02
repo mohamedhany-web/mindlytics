@@ -63,12 +63,14 @@
 
 @if(! ($siteHideMobileBar ?? false))
     <div class="h-mobile-bar">
-        <a href="{{ route('home') }}#consult" class="h-btn h-btn-primary">{{ $t('احجز استشارة مجانية', 'Free consultation') }}</a>
+        <a href="{{ route('advising.show') }}" data-advising-open class="h-btn h-btn-primary">{{ $t('احجز استشارة مجانية', 'Free consultation') }}</a>
         @if($wa !== '')
             <a href="https://wa.me/{{ $wa }}" class="h-btn h-btn-outline" target="_blank" rel="noopener noreferrer">{{ $t('واتساب', 'WhatsApp') }}</a>
         @endif
     </div>
 @endif
+
+@include('components.site.advising-modal')
 
 <script>
 (function () {

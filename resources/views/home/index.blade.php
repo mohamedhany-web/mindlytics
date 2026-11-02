@@ -53,7 +53,7 @@
 
     $goals = [
         ['id' => 'first-job', 'label' => $t('أول وظيفة', 'First job'), 'text' => $t('حديث التخرّج؟ ابدأ ببرنامج من الصفر، واخرج بمشروع وملف أعمال وشهادة يمكن التحقق منها.', 'Just graduated? Start a program from scratch and finish with a project, a portfolio and a verifiable certificate.'), 'cta' => $t('اعرض الدفعات القادمة', 'See upcoming intakes'), 'href' => '#intakes'],
-        ['id' => 'switch', 'label' => $t('تغيير المسار', 'Career change'), 'text' => $t('تعمل في مجال آخر؟ الدفعات المسائية والمحاضرات المسجّلة تسمح لك بالدراسة دون ترك عملك.', 'Working in another field? Evening intakes and recorded sessions let you study without leaving your job.'), 'cta' => $t('احجز استشارة', 'Book a consultation'), 'href' => '#consult'],
+        ['id' => 'switch', 'label' => $t('تغيير المسار', 'Career change'), 'text' => $t('تعمل في مجال آخر؟ الدفعات المسائية والمحاضرات المسجّلة تسمح لك بالدراسة دون ترك عملك.', 'Working in another field? Evening intakes and recorded sessions let you study without leaving your job.'), 'cta' => $t('احجز استشارة', 'Book a consultation'), 'href' => '#consult', 'goal' => 'career_change'],
         ['id' => 'upskill', 'label' => $t('تطوير مهاراتي', 'Upskill'), 'text' => $t('تريد أن تعمل أسرع أو تترقّى؟ الكورسات القصيرة تركّز على أداة واحدة تستخدمها من الأسبوع الأول.', 'Want to work faster or get promoted? Short courses focus on one tool you use from week one.'), 'cta' => $t('تصفّح الكورسات', 'Browse courses'), 'href' => route('public.courses')],
         ['id' => 'team', 'label' => $t('تدريب فريق', 'Train a team'), 'text' => $t('تدير فريقاً؟ نصمّم برنامجاً على احتياج شركتك، مع متابعة لتقدّم كل موظف.', 'Leading a team? We design a program around your company’s needs, with progress tracking for every employee.'), 'cta' => $t('اطلب عرض تدريب', 'Request a training proposal'), 'href' => '#business'],
     ];
@@ -350,7 +350,7 @@
                 <h2 id="h-business-title" class="h-h2" style="color: #FFFFFF; font-size: 28px">{{ $t('تدريب فرق الشركات على البرمجة والتقنيات الحديثة', 'Train your team in software and modern tech') }}</h2>
                 <p>{{ $t('برنامج مخصّص لاحتياج فريقك، في مقرّكم أو في الفرع، مع متابعة لتقدّم كل موظف.', 'A program built for your team, at your office or our branch, with progress tracking for every employee.') }}</p>
             </div>
-            <a href="#consult" class="h-btn h-btn-accent h-btn-lg" data-program="{{ $t('تدريب لشركة', 'Company training') }}">{{ $t('اطلب عرض تدريب', 'Request a training proposal') }}</a>
+            <a href="#consult" class="h-btn h-btn-accent h-btn-lg" data-advising-goal="team">{{ $t('اطلب عرض تدريب', 'Request a training proposal') }}</a>
         </div>
     </section>
 
@@ -369,31 +369,17 @@
                 </div>
                 <a href="{{ route('public.faq') }}" class="h-link" style="display: inline-block; margin-top: 16px">{{ $t('كل الأسئلة ←', 'All questions →') }}</a>
             </div>
-            <form class="h-side h-boxform" style="background: var(--h-mist); flex-basis: 400px" method="post" action="{{ route('public.contact.store') }}" aria-labelledby="h-consult-title" data-consult-form>
-                @csrf
-                <h2 id="h-consult-title">{{ $t('احجز استشارة أكاديمية مجانية', 'Book a free academic consultation') }}</h2>
-                <p>{{ $t('يتواصل معك مستشار ليقترح البرنامج والدفعة المناسبين لك.', 'An advisor will contact you to suggest the right program and intake.') }}</p>
-                <label class="h-field">{{ $t('الاسم', 'Name') }}
-                    <input type="text" name="name" required maxlength="255" autocomplete="name" value="{{ old('name') }}">
-                </label>
-                <label class="h-field">{{ $t('رقم الموبايل (واتساب)', 'Mobile (WhatsApp)') }}
-                    <input type="tel" name="phone" maxlength="20" autocomplete="tel" dir="ltr" style="text-align: right" value="{{ old('phone') }}">
-                </label>
-                <label class="h-field">{{ $t('البريد الإلكتروني', 'Email') }}
-                    <input type="email" name="email" required maxlength="255" autocomplete="email" dir="ltr" style="text-align: right" value="{{ old('email') }}">
-                </label>
-                <label class="h-field">{{ $t('البرنامج الذي يهمّك', 'Program you are interested in') }}
-                    <select name="program" data-program-select>
-                        @foreach($intakes->pluck('name')->unique()->take(8) as $name)<option>{{ $name }}</option>@endforeach
-                        <option>{{ $t('تدريب لشركة', 'Company training') }}</option>
-                        <option>{{ $t('لم أحدّد بعد', 'Not sure yet') }}</option>
-                    </select>
-                </label>
-                <input type="hidden" name="subject" value="طلب استشارة أكاديمية — الصفحة الرئيسية">
-                <input type="hidden" name="message" value="طلب استشارة أكاديمية من الصفحة الرئيسية." data-consult-message data-l-prefix="طلب استشارة أكاديمية من الصفحة الرئيسية. البرنامج: ">
-                <button type="submit" class="h-btn h-btn-primary h-btn-lg">{{ $t('اطلب الاستشارة', 'Request a consultation') }}</button>
-                @if($errors->any())<p role="alert" style="color: #B42318; margin: 0">{{ $errors->first() }}</p>@endif
-            </form>
+            <div class="h-side h-boxform h-adv-card" style="flex-basis: 400px">
+                <span class="h-eyebrow" style="margin: 0">{{ $t('جلسة إرشاد مهني مجانية', 'Free career guidance session') }}</span>
+                <h2 id="h-consult-title" class="h-kufi" style="font-size: 23px">{{ $t('مش عارف تبدأ منين؟ احجز جلسة مع مرشد', 'Not sure where to start? Book a session with an advisor') }}</h2>
+                <ul class="h-adv-points">
+                    <li>{{ $t('نفهم هدفك ومستواك الحالي', 'We understand your goal and current level') }}</li>
+                    <li>{{ $t('نرشّحلك المسار والدفعة المناسبين', 'We recommend the right path and intake') }}</li>
+                    <li>{{ $t('نرسم معاك خطة دخولك لسوق العمل', 'We map your way into the job market') }}</li>
+                </ul>
+                <a href="{{ route('advising.show') }}" data-advising-open class="h-btn h-btn-primary h-btn-lg">{{ $t('اختار ميعاد الجلسة', 'Pick a session time') }}</a>
+                <p style="font-size: 13px">{{ $t('مجانية، أونلاين أو في الفرع، والمواعيد بتتحدّث أول بأول.', 'Free, online or on campus, with live availability.') }}</p>
+            </div>
         </div>
     </section>
 </main>

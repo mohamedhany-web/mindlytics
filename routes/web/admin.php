@@ -51,6 +51,9 @@ use Illuminate\Support\Facades\Route;
         // قسم المنح الدراسية
         require app_path('Domains/Scholarship/routes/admin.php');
 
+        // الإرشاد المهني (docs/ADVISING.md)
+        require app_path('Domains/Advising/routes/admin.php');
+
         // قسم الاستثمار
         require app_path('Domains/Investment/routes/admin.php');
 

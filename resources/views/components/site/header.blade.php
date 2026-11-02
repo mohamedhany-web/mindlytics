@@ -48,7 +48,7 @@
             @guest
                 <a href="{{ route('register') }}" class="h-link h-hide-sm" style="font-size: 15px">{{ $t('إنشاء حساب', 'Create account') }}</a>
             @endguest
-            <a href="{{ route('home') }}#consult" class="h-btn h-btn-primary h-header-cta">{{ $t('احجز استشارة', 'Book a consultation') }}</a>
+            <a href="{{ route('advising.show') }}" data-advising-open class="h-btn h-btn-primary h-header-cta">{{ $t('احجز استشارة', 'Book a consultation') }}</a>
             <button type="button" class="h-menu-btn" aria-expanded="false" aria-controls="h-mobile-menu" aria-label="{{ $t('فتح القائمة', 'Open menu') }}" data-label-open="{{ $t('فتح القائمة', 'Open menu') }}" data-label-close="{{ $t('إغلاق القائمة', 'Close menu') }}" data-menu-toggle>
                 <svg width="20" height="14" viewBox="0 0 20 14" aria-hidden="true"><path d="M0 1H20M0 7H20M0 13H20" stroke="#17142A" stroke-width="2" fill="none"/></svg>
             </button>

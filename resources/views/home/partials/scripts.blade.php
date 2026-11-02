@@ -63,24 +63,5 @@
         });
     });
 
-    // الاستشارة: زرار «احجز مقعدك» بيختار البرنامج في الفورم، والرسالة بتتبعت فيها اسم البرنامج
-    var form = document.querySelector('[data-consult-form]');
-    if (form) {
-        var select = form.querySelector('[data-program-select]');
-        var message = form.querySelector('[data-consult-message]');
-        var syncMessage = function () {
-            if (message && select) { message.value = message.dataset.lPrefix + select.value; }
-        };
-        document.querySelectorAll('[data-program]').forEach(function (a) {
-            a.addEventListener('click', function () {
-                if (! select) { return; }
-                var wanted = a.dataset.program;
-                Array.prototype.forEach.call(select.options, function (o) { if (o.value === wanted) { select.value = wanted; } });
-                syncMessage();
-            });
-        });
-        if (select) { select.addEventListener('change', syncMessage); }
-        syncMessage();
-    }
 })();
 </script>
