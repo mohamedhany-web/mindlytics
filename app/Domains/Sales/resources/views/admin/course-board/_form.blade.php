@@ -54,7 +54,12 @@
     <div>
         <label class="block text-xs font-semibold text-slate-500 mb-1">السعر أونلاين (ج.م)</label>
         <input type="number" step="0.01" min="0" name="price_online" value="{{ old('price_online', $entry->price_online) }}"
-               class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+               class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm">        <p class="text-[11px] text-slate-500 mt-1">لو فيه الكورس المربوط، الموقع بيعرض سعره هو (نفس سعر الدفع).</p>
+        @if($entry->exists && ($conflict = $entry->priceConflict()))
+            <p class="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 mt-1">
+                السعر هنا {{ number_format($conflict['board'], 0) }} ج.م، لكن سعر «{{ $conflict['linked_name'] }}» {{ number_format($conflict['linked'], 0) }} ج.م. الموقع بيعرض {{ number_format($conflict['linked'], 0) }}.
+            </p>
+        @endif
     </div>
     <div>
         <label class="block text-xs font-semibold text-slate-500 mb-1">السعر مسجّل (ج.م)</label>

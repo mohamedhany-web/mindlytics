@@ -57,6 +57,15 @@ class SalesDiplomaBoardEntry extends Model
                 $entry->slug = static::generateUniqueSlug($entry->name);
             }
         });
+
+        // الموقع العام بيعمل cache لوجود دفعات (شريط «القبول مفتوح») ولقائمة المجالات في بوب أب الإرشاد
+        $flush = function (): void {
+            \Illuminate\Support\Facades\Cache::forget('site.has_intakes');
+            \Illuminate\Support\Facades\Cache::forget('advising.interests.ar');
+            \Illuminate\Support\Facades\Cache::forget('advising.interests.en');
+        };
+        static::saved($flush);
+        static::deleted($flush);
     }
 
     public static function generateUniqueSlug(string $name): string
@@ -99,6 +108,42 @@ class SalesDiplomaBoardEntry extends Model
     public function scopeOrdered(Builder $query): Builder
     {
         return $query->orderBy('sort_order')->orderBy('name');
+    }
+
+    /**
+     * السعر اللي بيظهر برّه (الرئيسية وصفحة التوصيف): سعر المسار المربوط لو موجود، لأنه هو اللي بيتدفع فعلاً في الـ checkout،
+     * وإلا السعر الأونلاين المكتوب في اللوحة. null = مفيش سعر.
+     */
+    public function publicPrice(): ?float
+    {
+        $year = $this->academicYear;
+        if ($year && $year->is_active && (float) $year->price > 0) {
+            return (float) $year->price;
+        }
+
+        return $this->price_online !== null && (float) $this->price_online > 0 ? (float) $this->price_online : null;
+    }
+
+    /** السعر المكتوب في اللوحة مختلف عن سعر المسار المربوط؟ (تنبيه للإدارة) */
+    public function priceConflict(): ?array
+    {
+        $year = $this->academicYear;
+        if (! $year || (float) $year->price <= 0 || $this->price_online === null || (float) $this->price_online <= 0) {
+            return null;
+        }
+
+        return abs((float) $year->price - (float) $this->price_online) > 0.009 ? ['board' => (float) $this->price_online, 'linked' => (float) $year->price, 'linked_name' => $year->name] : null;
+    }
+
+    /** صفحة التفاصيل: صفحة التوصيف لو منشورة، وإلا صفحة المسار المربوط. */
+    public function detailsUrl(): ?string
+    {
+        if ($url = $this->landingUrl()) {
+            return $url;
+        }
+        $year = $this->academicYear;
+
+        return $year && $year->is_active ? route('public.learning-path.show', \Illuminate\Support\Str::slug($year->name)) : null;
     }
 
     public function landingUrl(): ?string

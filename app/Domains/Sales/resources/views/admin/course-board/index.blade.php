@@ -69,7 +69,7 @@
                                 <td class="px-4 py-3 text-slate-600">{{ $entry->schedule_days ?: '—' }}</td>
                                 <td class="px-4 py-3 text-slate-600">{{ $entry->duration ?: '—' }}</td>
                                 <td class="px-4 py-3 text-slate-600">{{ $entry->hours ?: '—' }}</td>
-                                <td class="px-4 py-3 text-slate-800 whitespace-nowrap">{{ $entry->priceLabel() }}</td>
+                                <td class="px-4 py-3 text-slate-800 whitespace-nowrap">{{ $entry->priceLabel() }}@if($entry->priceConflict())<span class="block text-[11px] font-bold text-amber-700" title="الموقع بيعرض سعر {{ $entry->priceConflict()['linked_name'] }}">⚠ الموقع بيعرض {{ number_format($entry->priceConflict()['linked'], 0) }}</span>@endif</td>
                                 <td class="px-4 py-3 text-slate-600">{{ $entry->format ?: '—' }}</td>
                                 <td class="px-4 py-3">
                                     @if($entry->landingUrl())

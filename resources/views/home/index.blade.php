@@ -12,9 +12,10 @@
         $flagship = [
             'name' => $homeDiploma->name,
             'summary' => $homeDiploma->summary,
-            'price' => $homeDiploma->price_online && (float) $homeDiploma->price_online > 0 ? number_format((float) $homeDiploma->price_online, 0).$t(' ج.م', ' EGP') : null,
+            // نفس سعر الـ checkout: سعر المسار المربوط لو موجود، وإلا سعر اللوحة
+            'price' => $homeDiploma->publicPrice() !== null ? number_format($homeDiploma->publicPrice(), 0).$t(' ج.م', ' EGP') : null,
             'highlights' => array_slice($homeDiploma->landingHighlights(), 0, 6),
-            'url' => $homeDiploma->landingUrl(),
+            'url' => $homeDiploma->detailsUrl(),
             'label' => $t('دبلومة · البرنامج الرئيسي', 'Diploma · flagship program'),
         ];
     } elseif ($paths->isNotEmpty()) {
@@ -57,13 +58,19 @@
         ['id' => 'upskill', 'label' => $t('تطوير مهاراتي', 'Upskill'), 'text' => $t('تريد أن تعمل أسرع أو تترقّى؟ الكورسات القصيرة تركّز على أداة واحدة تستخدمها من الأسبوع الأول.', 'Want to work faster or get promoted? Short courses focus on one tool you use from week one.'), 'cta' => $t('تصفّح الكورسات', 'Browse courses'), 'href' => route('public.courses')],
         ['id' => 'team', 'label' => $t('تدريب فريق', 'Train a team'), 'text' => $t('تدير فريقاً؟ نصمّم برنامجاً على احتياج شركتك، مع متابعة لتقدّم كل موظف.', 'Leading a team? We design a program around your company’s needs, with progress tracking for every employee.'), 'cta' => $t('اطلب عرض تدريب', 'Request a training proposal'), 'href' => '#business'],
     ];
+    // الحقائق دي بتتحسب من البيانات (LandingController::homeFacts) عشان الصفحة ما تقولش حاجة مش موجودة
+    $facts = $homeFacts ?? ['campus' => false, 'installments' => false];
     $faqs = [
         ['q' => $t('هل أحتاج خبرة سابقة؟', 'Do I need prior experience?'), 'a' => $t('لا في أغلب البرامج. يساعدك المستشار الأكاديمي على اختيار نقطة البداية المناسبة لمستواك.', 'Not for most programs. An academic advisor helps you pick the right starting point for your level.')],
-        ['q' => $t('هل يمكن تقسيط الرسوم؟', 'Can I pay in instalments?'), 'a' => $t('نعم، تتوفّر خطط تقسيط للبرامج الطويلة، وتُحدَّد تفاصيلها عند التسجيل.', 'Yes, long programs have instalment plans, set at registration.')],
+        ['q' => $t('هل يمكن تقسيط الرسوم؟', 'Can I pay in instalments?'), 'a' => $facts['installments']
+            ? $t('فيه خطط تقسيط لبعض البرامج، وبتظهر على كارت الدفعة لما تكون متاحة. المستشار يوضّحلك الخطة قبل التسجيل.', 'Some programs have instalment plans, shown on the intake card when available. An advisor explains the plan before you enrol.')
+            : $t('طرق الدفع بتتحدد مع المستشار قبل التسجيل، احجز جلسة واسأل عن البرنامج اللي يهمّك.', 'Payment options are set with an advisor before you enrol. Book a session and ask about the program you want.')],
         ['q' => $t('ماذا لو فاتتني محاضرة؟', 'What if I miss a session?'), 'a' => $t('المحاضرات المباشرة تُسجَّل وتُتاح لك على بوابة الطالب.', 'Live sessions are recorded and available on the student portal.')],
         ['q' => $t('كيف تتحقق الشركات من شهادتي؟', 'How do employers verify my certificate?'), 'a' => $t('لكل شهادة رقم تسلسلي يمكن لأي جهة التحقق منه من صفحة التحقق من الشهادات على موقعنا.', 'Every certificate has a serial number that anyone can check on our certificate verification page.')],
-        ['q' => $t('ما الفرق بين الأونلاين المباشر والحضوري؟', 'What is the difference between live online and on campus?'), 'a' => $t('المنهج والمحاضر واحد. الحضوري في الفرع، والأونلاين مباشر من أي مكان بالتفاعل نفسه.', 'Same curriculum and instructor. On campus in the branch, or live online from anywhere with the same interaction.')],
     ];
+    if ($facts['campus']) {
+        $faqs[] = ['q' => $t('ما الفرق بين الأونلاين المباشر والحضوري؟', 'What is the difference between live online and on campus?'), 'a' => $t('المنهج والمحاضر واحد. الحضوري في الفرع، والأونلاين مباشر من أي مكان بالتفاعل نفسه.', 'Same curriculum and instructor. On campus in the branch, or live online from anywhere with the same interaction.')];
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="{{ app()->getLocale() }}" dir="{{ $siteAr ? 'rtl' : 'ltr' }}" itemscope itemtype="https://schema.org/EducationalOrganization">
@@ -109,9 +116,9 @@
                     <a href="#consult" class="h-link">{{ $t('أو احجز استشارة مجانية', 'or book a free consultation') }}</a>
                 </div>
                 <ul class="h-hero-facts">
-                    <li>{{ $t('أونلاين مباشر أو حضوري', 'Live online or on campus') }}</li>
+                    <li>{{ $facts['campus'] ? $t('أونلاين مباشر أو حضوري', 'Live online or on campus') : $t('أونلاين مباشر', 'Live online') }}</li>
                     <li>{{ $t('شهادة برقم تحقق', 'Verifiable certificate') }}</li>
-                    <li>{{ $t('تقسيط للبرامج الطويلة', 'Instalments on long programs') }}</li>
+                    @if($facts['installments'])<li>{{ $t('تقسيط لبعض البرامج', 'Instalments on some programs') }}</li>@endif
                 </ul>
             </div>
         </div>
@@ -128,7 +135,7 @@
                 @if(($statsLearners ?? 0) > 0)<div class="h-stat"><b>+{{ number_format($statsLearners) }}</b><span>{{ $t('متعلّم مسجّل', 'registered learners') }}</span></div>@endif
                 @if(($statsCourses ?? 0) > 0)<div class="h-stat"><b>+{{ number_format($statsCourses) }}</b><span>{{ $t('كورس وبرنامج', 'courses and programs') }}</span></div>@endif
                 @if(($statsLearningPaths ?? 0) > 0)<div class="h-stat"><b>{{ number_format($statsLearningPaths) }}</b><span>{{ $t('مسار تعليمي', 'Learning path') }}</span></div>@endif
-                <div class="h-stat"><b>2</b><span>{{ $t('طريقتا دراسة: أونلاين مباشر وحضوري', 'Two study modes: live online and on campus') }}</span></div>
+                @if($intakes->isNotEmpty())<div class="h-stat"><b>{{ $intakes->count() }}</b><span>{{ $t('دفعات قادمة', 'upcoming intakes') }}</span></div>@endif
             </div>
         </section>
     @endif
@@ -181,6 +188,7 @@
                                 <div><dt>{{ $t('تبدأ', 'Starts') }}</dt><dd>{{ $i['start'] ?? $t('يُعلن قريباً', 'Announced soon') }}</dd></div>
                                 <div><dt>{{ $t('المواعيد', 'Schedule') }}</dt><dd>{{ $i['days'] ?? $t('تُحدَّد مع الدفعة', 'Set with the intake') }}</dd></div>
                                 <div><dt>{{ $t('الرسوم', 'Fees') }}</dt><dd>{{ $i['price'] ?? $t('تواصل معنا', 'Contact us') }}</dd></div>
+                                @if(! empty($i['installments']))<div><dt>{{ $t('الدفع', 'Payment') }}</dt><dd>{{ $i['installments'] }}</dd></div>@endif
                             </dl>
                             <div class="h-intake-actions">
                                 <a href="#consult" class="h-btn h-btn-primary" data-program="{{ $i['name'] }}">{{ $t('احجز مقعدك', 'Reserve your seat') }}</a>
@@ -277,7 +285,7 @@
                 <span class="h-eyebrow">{{ $t('نظام الدراسة', 'How you study') }}</span>
                 <h2 id="h-system-title" class="h-h2">{{ $t('حضور ومتابعة وتقييم، لا مشاهدة فقط', 'Attendance, follow-up and assessment, not just videos') }}</h2>
                 <div class="h-system">
-                    <div><b>{{ $t('محاضرات مباشرة', 'Live sessions') }}</b><span>{{ $t('أونلاين أو في الفرع، مع تسجيل للمحاضرات.', 'Online or on campus, with every session recorded.') }}</span></div>
+                    <div><b>{{ $t('محاضرات مباشرة', 'Live sessions') }}</b><span>{{ $facts['campus'] ? $t('أونلاين أو في الفرع، مع تسجيل للمحاضرات.', 'Online or on campus, with every session recorded.') : $t('أونلاين مباشر، مع تسجيل للمحاضرات.', 'Live online, with every session recorded.') }}</span></div>
                     <div><b>{{ $t('بوابة الطالب', 'Student portal') }}</b><span>{{ $t('واجبات واختبارات وتقدّم واضح لكل طالب.', 'Assignments, exams and clear progress for every student.') }}</span></div>
                     <div><b>{{ $t('مشروع تطبيقي', 'Applied project') }}</b><span>{{ $t('على مشروع أو حالة عمل حقيقية، يُضاف إلى ملف أعمالك.', 'On a real project or business case, added to your portfolio.') }}</span></div>
                     <div><b>{{ $t('شهادة برقم تحقق', 'Verifiable certificate') }}</b><span>{{ $t('يمكن لأي جهة توظيف التأكد منها من موقعنا.', 'Any employer can confirm it on our website.') }}</span></div>
@@ -332,11 +340,11 @@
                 <div class="h-side">
                     <span class="h-eyebrow h-eyebrow-accent">{{ $t('الرسوم والتقسيط', 'Fees and instalments') }}</span>
                     <h2 id="h-fees-title" class="h-h2" style="color: #FFFFFF">{{ $t('رسوم واضحة من البداية، وطرق دفع مرنة', 'Clear fees upfront, flexible ways to pay') }}</h2>
-                    <p class="h-lead" style="color: var(--h-on-dark-2)">{{ $t('لا توجد رسوم مخفية. تُحدَّد خطة الدفع عند التسجيل، والدفع أونلاين أو في الفرع.', 'No hidden fees. Your payment plan is set at registration, and you can pay online or at the branch.') }}</p>
+                    <p class="h-lead" style="color: var(--h-on-dark-2)">{{ $t('لا توجد رسوم مخفية. السعر هنا هو نفسه اللي بتدفعه عند التسجيل.', 'No hidden fees. The price here is the same one you pay at checkout.') }}</p>
                 </div>
                 <div class="h-grow h-fees">
                     <div><small>{{ $flagship['name'] }}</small><b>{{ $flagship['price'] }}</b><span>{{ $t('سداد كامل', 'Paid in full') }}</span></div>
-                    <div><small>{{ $t('تقسيط', 'Instalments') }}</small><b>{{ $t('متاح', 'Available') }}</b><span>{{ $t('مقدّم ثم أقساط، حسب خطة البرنامج', 'A deposit, then instalments, per the program plan') }}</span></div>
+                    @if($facts['installments'])<div><small>{{ $t('تقسيط', 'Instalments') }}</small><b>{{ $t('لبعض البرامج', 'Some programs') }}</b><span>{{ $t('بيظهر على كارت الدفعة لما يكون متاح', 'Shown on the intake card when available') }}</span></div>@endif
                     <div><small>{{ $t('استشارة قبل الدفع', 'Advice before you pay') }}</small><b>{{ $t('مجانية', 'Free') }}</b><span>{{ $t('نساعدك تختار البرنامج المناسب أولاً', 'We help you pick the right program first') }}</span></div>
                 </div>
             </div>
@@ -378,7 +386,7 @@
                     <li>{{ $t('نرسم معاك خطة دخولك لسوق العمل', 'We map your way into the job market') }}</li>
                 </ul>
                 <a href="{{ route('advising.show') }}" data-advising-open class="h-btn h-btn-primary h-btn-lg">{{ $t('اختار ميعاد الجلسة', 'Pick a session time') }}</a>
-                <p style="font-size: 13px">{{ $t('مجانية، أونلاين أو في الفرع، والمواعيد بتتحدّث أول بأول.', 'Free, online or on campus, with live availability.') }}</p>
+                <p style="font-size: 13px">{{ $t('مجانية، والمواعيد المتاحة بتتحدّث أول بأول.', 'Free, with live availability.') }}</p>
             </div>
         </div>
     </section>

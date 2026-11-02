@@ -52,6 +52,15 @@ class SalesCourseBoardEntry extends Model
                 $entry->slug = static::generateUniqueSlug($entry->name);
             }
         });
+
+        // الموقع العام بيعمل cache لوجود دفعات (شريط «القبول مفتوح») ولقائمة المجالات في بوب أب الإرشاد
+        $flush = function (): void {
+            \Illuminate\Support\Facades\Cache::forget('site.has_intakes');
+            \Illuminate\Support\Facades\Cache::forget('advising.interests.ar');
+            \Illuminate\Support\Facades\Cache::forget('advising.interests.en');
+        };
+        static::saved($flush);
+        static::deleted($flush);
     }
 
     public static function generateUniqueSlug(string $name): string
@@ -99,6 +108,51 @@ class SalesCourseBoardEntry extends Model
         }
 
         return filled($this->start_label) && $this->start_label !== '—' ? (string) $this->start_label : null;
+    }
+
+    /**
+     * السعر اللي بيظهر برّه: سعر الكورس المربوط بعد الخصم (نفس اللي بيتدفع في الـ checkout)، وإلا السعر الأونلاين المكتوب في اللوحة.
+     * 0 = الكورس المربوط مجاني. null = مفيش سعر.
+     */
+    public function publicPrice(): ?float
+    {
+        $course = $this->advancedCourse;
+        if ($course && $course->is_active) {
+            return $course->effectivePrice();
+        }
+
+        return $this->price_online !== null && (float) $this->price_online > 0 ? (float) $this->price_online : null;
+    }
+
+    /** السعر المكتوب في اللوحة مختلف عن سعر الكورس المربوط؟ (تنبيه للإدارة) */
+    public function priceConflict(): ?array
+    {
+        $course = $this->advancedCourse;
+        if (! $course || $this->price_online === null || (float) $this->price_online <= 0) {
+            return null;
+        }
+        $linked = $course->effectivePrice();
+
+        return abs($linked - (float) $this->price_online) > 0.009 ? ['board' => (float) $this->price_online, 'linked' => $linked, 'linked_name' => $course->title] : null;
+    }
+
+    /** خطة التقسيط الفعّالة للكورس المربوط (لو موجودة). */
+    public function installmentPlan(): ?\App\Domains\Accounting\Models\InstallmentPlan
+    {
+        return $this->advanced_course_id
+            ? \App\Domains\Accounting\Models\InstallmentPlan::query()->where('advanced_course_id', $this->advanced_course_id)->where('is_active', true)->orderBy('installments_count')->first()
+            : null;
+    }
+
+    /** صفحة التفاصيل: صفحة التوصيف لو منشورة، وإلا صفحة الكورس المربوط. */
+    public function detailsUrl(): ?string
+    {
+        if ($url = $this->landingUrl()) {
+            return $url;
+        }
+        $course = $this->advancedCourse;
+
+        return $course && $course->is_active ? route('public.course.show', $course->id) : null;
     }
 
     public function landingUrl(): ?string

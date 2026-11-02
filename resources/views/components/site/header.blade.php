@@ -13,10 +13,21 @@
     ];
     $otherLocaleUrl = request()->fullUrlWithQuery(['lang' => $siteAr ? 'en' : 'ar']);
     $logoUrl = $platformLogoUrl ?? null;
+    // «القبول مفتوح» بيظهر بس لو فيه دفعات نشطة في لوحة الدبلومات/الكورسات
+    try {
+        $siteHasIntakes = \Illuminate\Support\Facades\Cache::remember('site.has_intakes', 300, fn () => \App\Domains\Sales\Models\SalesDiplomaBoardEntry::query()->active()->exists()
+            || \App\Domains\Sales\Models\SalesCourseBoardEntry::query()->active()->exists());
+    } catch (\Throwable $e) {
+        $siteHasIntakes = false;
+    }
 @endphp
 <div class="h-topbar">
     <div class="h-wrap">
-        <span>{{ $t('القبول مفتوح للدفعات القادمة', 'Admissions are open for upcoming intakes') }} — <a href="{{ route('home') }}#intakes" style="color: var(--h-accent); font-weight: 600">{{ $t('اعرض المواعيد', 'See dates') }}</a></span>
+        @if($siteHasIntakes)
+            <span>{{ $t('القبول مفتوح للدفعات القادمة', 'Admissions are open for upcoming intakes') }} — <a href="{{ route('home') }}#intakes" style="color: var(--h-accent); font-weight: 600">{{ $t('اعرض المواعيد', 'See dates') }}</a></span>
+        @else
+            <span>{{ $t('مش عارف تبدأ منين؟', 'Not sure where to start?') }} — <a href="{{ route('advising.show') }}" data-advising-open style="color: var(--h-accent); font-weight: 600">{{ $t('احجز جلسة إرشاد مجانية', 'Book a free guidance session') }}</a></span>
+        @endif
         <div class="h-topbar-links">
             <a href="{{ route('public.certificates.verify') }}" class="h-hide-sm">{{ $t('التحقق من شهادة', 'Verify a certificate') }}</a>
             <a href="{{ $otherLocaleUrl }}" hreflang="{{ $siteAr ? 'en' : 'ar' }}">{{ $siteAr ? 'English' : 'العربية' }}</a>

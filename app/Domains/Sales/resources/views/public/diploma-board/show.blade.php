@@ -53,13 +53,13 @@
                 @endforeach
             </div>
 
-            @if($entry->price_online || $entry->price_recorded)
+            @if($entry->publicPrice() !== null || $entry->price_recorded)
                 <div class="px-6 py-5 bg-gradient-to-l from-emerald-600 to-teal-600 text-white">
                     <div class="text-sm font-semibold opacity-90 mb-1">السعر (EGP)</div>
                     <div class="flex flex-wrap gap-4 items-end">
-                        @if($entry->price_online)
+                        @if($entry->publicPrice() !== null)
                             <div>
-                                <span class="text-3xl font-black">{{ number_format((float) $entry->price_online, 0) }}</span>
+                                <span class="text-3xl font-black">{{ ($entry->publicPrice() > 0 ? number_format($entry->publicPrice(), 0) : 'مجاني') }}</span>
                                 <span class="text-sm mr-1 opacity-90">أونلاين</span>
                             </div>
                         @endif

@@ -2,7 +2,11 @@
 
 namespace Tests\Smoke;
 
+use App\Domains\Accounting\Models\InstallmentPlan;
+use App\Domains\Learning\Models\AcademicYear;
+use App\Domains\Learning\Models\AdvancedCourse;
 use App\Domains\Sales\Models\SalesCourseBoardEntry;
+use Illuminate\Support\Facades\Cache;
 use App\Domains\Sales\Models\SalesDiplomaBoardEntry;
 
 /**
@@ -68,4 +72,57 @@ class HomePageSmokeTest extends SmokeTestCase
             ->assertSee('h-hero', false);
     }
 
+
+    /** الرئيسية وصفحة التوصيف بيعرضوا نفس سعر الـ checkout، مش سعر اللوحة لو مختلف. */
+    public function test_prices_match_the_linked_path_and_course_checkout_price(): void
+    {
+        SalesDiplomaBoardEntry::query()->update(['is_active' => false]);
+        SalesCourseBoardEntry::query()->update(['is_active' => false]);
+        Cache::forget('site.has_intakes');
+
+        $year = AcademicYear::query()->where('is_active', true)->firstOrFail();
+        $year->update(['price' => 7777]);
+        $diploma = SalesDiplomaBoardEntry::create(['name' => 'Smoke Linked Diploma', 'starts_at' => now()->addDays(3)->toDateString(), 'price_online' => 9999, 'academic_year_id' => $year->id, 'is_active' => true, 'landing_published' => true]);
+
+        $course = AdvancedCourse::query()->firstOrFail();
+        $course->update(['is_active' => true, 'price' => 3000, 'discount_amount' => 500, 'is_free' => false]);
+        $board = SalesCourseBoardEntry::create(['name' => 'Smoke Linked Course', 'starts_at' => now()->addDays(4)->toDateString(), 'price_online' => 1111, 'advanced_course_id' => $course->id, 'is_active' => true, 'landing_published' => false]);
+        InstallmentPlan::create(['name' => 'Smoke Plan', 'slug' => 'smoke-plan-'.uniqid(), 'advanced_course_id' => $course->id, 'total_amount' => 2500, 'deposit_amount' => 500, 'installments_count' => 4, 'frequency_unit' => 'month', 'frequency_interval' => 1, 'is_active' => true]);
+
+        $this->assertSame(['board' => 9999.0, 'linked' => 7777.0, 'linked_name' => $year->name], $diploma->fresh()->priceConflict());
+        $this->get('/?lang=ar')->assertOk()
+            ->assertSee('7,777 ج.م')->assertDontSee('9,999')
+            ->assertSee('2,500 ج.م')->assertDontSee('1,111')
+            ->assertSee('تقسيط على 4 أقساط')
+            ->assertSee('تقسيط لبعض البرامج')
+            ->assertSee('القبول مفتوح للدفعات القادمة')
+            ->assertSee(route('public.course.show', $course->id), false); // التفاصيل = صفحة الكورس المربوط لما التوصيف مش منشور
+        $this->get(route('public.sales-diploma-board.show', $diploma->slug))->assertOk()->assertSee('7,777')->assertDontSee('9,999');
+    }
+
+    /** من غير دفعات ولا تقسيط: الصفحة ما تدّعيش حاجات مش موجودة. */
+    public function test_no_claims_without_data(): void
+    {
+        SalesDiplomaBoardEntry::query()->update(['is_active' => false]);
+        SalesCourseBoardEntry::query()->update(['is_active' => false]);
+        InstallmentPlan::query()->update(['is_active' => false]);
+        Cache::forget('site.has_intakes');
+
+        $this->get('/?lang=ar')->assertOk()
+            ->assertDontSee('القبول مفتوح للدفعات القادمة')
+            ->assertSee('احجز جلسة إرشاد مجانية')
+            ->assertDontSee('تقسيط لبعض البرامج')
+            ->assertDontSee('طريقتا دراسة');
+    }
+
+    /** المحاضرون في الرئيسية بس اللي صفحتهم بتفتح فعلاً. */
+    public function test_homepage_instructor_links_open(): void
+    {
+        $html = $this->get('/?lang=ar')->assertOk()->getContent();
+        preg_match_all('#href="[^"]*/instructors/(\d+)"#', $html, $m);
+        foreach (array_unique($m[1]) as $id) {
+            $this->get('/instructors/'.$id)->assertOk();
+        }
+        $this->assertTrue(true);
+    }
 }
