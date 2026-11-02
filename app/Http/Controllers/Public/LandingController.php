@@ -10,8 +10,11 @@ use App\Domains\Learning\Models\LessonProgress;
 use App\Domains\Learning\Models\InstructorProfile;
 use App\Domains\Offline\Models\OfflineCourse;
 use App\Domains\Marketing\Models\PopupAd;
+use App\Domains\Sales\Models\SalesCourseBoardEntry;
+use App\Domains\Sales\Models\SalesDiplomaBoardEntry;
 use App\Models\User;
 use App\Support\BranchContext;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -78,7 +81,7 @@ class LandingController extends Controller
             ->limit(12)
             ->get();
 
-        return view('welcome', compact(
+        $data = compact(
             'popupAd',
             'landingPaths',
             'statsLearners',
@@ -86,7 +89,69 @@ class LandingController extends Controller
             'statsCertificates',
             'statsLearningPaths',
             'featuredCourses'
-        ));
+        );
+
+        // الصفحة الجديدة (docs/HOMEPAGE.md) بالعربي؛ الإنجليزي يفضل على الصفحة القديمة لحد ما تتترجم
+        if (app()->getLocale() !== 'ar') {
+            return view('welcome', $data);
+        }
+
+        $homeDiploma = SalesDiplomaBoardEntry::query()->active()->ordered()->first();
+
+        return view('home.index', $data + [
+            'homeDiploma' => $homeDiploma,
+            'homeIntakes' => $this->homeIntakes(),
+            'homeInstructors' => InstructorProfile::approved()->with('user')->orderBy('created_at')->limit(3)->get()
+                ->filter(fn (InstructorProfile $p) => $p->user !== null)->values(),
+        ]);
+    }
+
+    /**
+     * الدفعات القادمة على الصفحة الرئيسية: من لوحة معلومات الدبلومات والكورسات (إدارة المبيعات).
+     * الأقرب ميعاداً أولاً، واللي من غير تاريخ في الآخر.
+     *
+     * @return Collection<int, array{kind: string, type: string, name: string, start: ?string, days: ?string, mode: string, mode_key: string, price: ?string, url: ?string}>
+     */
+    private function homeIntakes(): Collection
+    {
+        $mode = function (?string $format): array {
+            $f = mb_strtolower((string) $format);
+
+            return match (true) {
+                str_contains($f, 'حضور') || str_contains($f, 'offline') || str_contains($f, 'hybrid') => ['campus', filled($format) ? (string) $format : 'حضوري'],
+                str_contains($f, 'مسجل') || str_contains($f, 'مسجّل') || str_contains($f, 'record') => ['recorded', (string) $format],
+                default => ['online', filled($format) ? (string) $format : 'أونلاين مباشر'],
+            };
+        };
+        $price = fn ($online) => $online !== null && (float) $online > 0 ? number_format((float) $online, 0).' ج.م' : null;
+
+        $diplomas = SalesDiplomaBoardEntry::query()->active()->ordered()->limit(12)->get()
+            ->map(function (SalesDiplomaBoardEntry $e) use ($mode, $price) {
+                [$key, $label] = $mode($e->format);
+
+                return [
+                    'kind' => 'diploma', 'type' => 'دبلومة', 'name' => (string) $e->name,
+                    'start' => $e->startDisplay(), 'sort' => $e->starts_at?->timestamp ?? PHP_INT_MAX,
+                    'days' => filled($e->schedule_days) ? (string) $e->schedule_days : null,
+                    'mode' => $label, 'mode_key' => $key, 'price' => $price($e->price_online), 'url' => $e->landingUrl(),
+                ];
+            });
+
+        $courses = SalesCourseBoardEntry::query()->active()->ordered()->limit(12)->get()
+            ->map(function (SalesCourseBoardEntry $e) use ($mode, $price) {
+                [$key, $label] = $mode($e->format);
+                $start = filled($e->start_label) && $e->start_label !== '—' ? (string) $e->start_label : null;
+
+                return [
+                    'kind' => 'course', 'type' => 'كورس', 'name' => (string) $e->name,
+                    'start' => $start, 'sort' => PHP_INT_MAX - 1,
+                    'days' => filled($e->schedule_days) ? (string) $e->schedule_days : null,
+                    'mode' => $label, 'mode_key' => $key, 'price' => $price($e->price_online), 'url' => $e->landingUrl(),
+                ];
+            });
+
+        return $diplomas->concat($courses)->sortBy('sort')->take(9)
+            ->map(fn (array $i) => collect($i)->except('sort')->all())->values();
     }
 
     /**
