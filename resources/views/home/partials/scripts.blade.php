@@ -1,19 +1,6 @@
 {{-- سلوك الصفحة الرئيسية: قائمة الموبايل، فلترة الدفعات، تابات الأهداف، ورسالة الاستشارة. الصفحة شغالة كاملة من غير JS. --}}
 <script>
 (function () {
-    // قائمة الموبايل
-    var toggle = document.querySelector('[data-menu-toggle]');
-    var menu = document.getElementById('h-mobile-menu');
-    if (toggle && menu) {
-        var setMenu = function (open) {
-            menu.classList.toggle('is-open', open);
-            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-            toggle.setAttribute('aria-label', open ? 'إغلاق القائمة' : 'فتح القائمة');
-        };
-        toggle.addEventListener('click', function () { setMenu(! menu.classList.contains('is-open')); });
-        menu.querySelectorAll('[data-menu-close]').forEach(function (a) { a.addEventListener('click', function () { setMenu(false); }); });
-    }
-
     // فلترة الدفعات (النوع × الطريقة)
     var state = { kind: 'all', mode: 'all' };
     var cards = document.querySelectorAll('.h-intake');

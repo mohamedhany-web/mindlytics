@@ -219,7 +219,7 @@
                         <span class="h-eyebrow">{{ $t('البرامج', 'Programs') }}</span>
                         <h2 id="h-programs-title" class="h-h2">{{ $t('برنامج رئيسي، وبرامج أقصر تكمّله', 'A flagship program, and shorter ones around it') }}</h2>
                     </div>
-                    <a href="{{ route('public.learning-paths.index') }}" class="h-link">{{ $t('كل المسارات ←', 'All paths →') }}</a>
+                    <a href="{{ route('public.learning-paths.index') }}" class="h-link">{{ $t('كل البرامج التدريبية ←', 'All programs →') }}</a>
                 </div>
                 <div class="h-programs">
                     @if($flagship)

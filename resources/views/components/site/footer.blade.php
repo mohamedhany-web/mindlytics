@@ -29,7 +29,7 @@
             </div>
             <nav aria-label="{{ $t('البرامج', 'Programs') }}">
                 <b>{{ $t('البرامج', 'Programs') }}</b>
-                <a href="{{ route('public.learning-paths.index') }}">{{ $t('المسارات التعليمية', 'Learning paths') }}</a>
+                <a href="{{ route('public.learning-paths.index') }}">{{ $t('البرامج التدريبية', 'Programs') }}</a>
                 <a href="{{ route('public.courses') }}">{{ $t('الكورسات', 'Courses') }}</a>
                 <a href="{{ route('home') }}#intakes">{{ $t('الدفعات القادمة', 'Upcoming intakes') }}</a>
                 <a href="{{ route('public.instructors.index') }}">{{ $t('المحاضرون', 'Instructors') }}</a>
@@ -72,18 +72,3 @@
 
 @include('components.site.advising-modal')
 
-<script>
-(function () {
-    var toggle = document.querySelector('[data-menu-toggle]');
-    var menu = document.getElementById('h-mobile-menu');
-    if (! toggle || ! menu) { return; }
-    var setMenu = function (open) {
-        menu.classList.toggle('is-open', open);
-        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-        toggle.setAttribute('aria-label', open ? toggle.dataset.labelClose : toggle.dataset.labelOpen);
-    };
-    toggle.addEventListener('click', function () { setMenu(! menu.classList.contains('is-open')); });
-    menu.querySelectorAll('[data-menu-close]').forEach(function (a) { a.addEventListener('click', function () { setMenu(false); }); });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { setMenu(false); } });
-})();
-</script>
