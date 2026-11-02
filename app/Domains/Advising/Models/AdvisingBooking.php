@@ -16,6 +16,7 @@ class AdvisingBooking extends Model
         'name', 'phone', 'email', 'goal', 'level', 'interest', 'notes',
         'starts_at', 'duration_minutes', 'mode', 'availability_id', 'advisor_id', 'user_id',
         'status', 'outcome', 'recommended_program', 'source_url', 'ip',
+        'sales_lead_id', 'sales_planned_activity_id',
     ];
 
     public const GOALS = [
@@ -65,6 +66,16 @@ class AdvisingBooking extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function lead(): BelongsTo
+    {
+        return $this->belongsTo(\App\Domains\Sales\Models\SalesLead::class, 'sales_lead_id');
+    }
+
+    public function plannedActivity(): BelongsTo
+    {
+        return $this->belongsTo(\App\Domains\Sales\Models\SalesPlannedActivity::class, 'sales_planned_activity_id');
     }
 
     public function availability(): BelongsTo

@@ -757,6 +757,7 @@ POST admin/scholarships/registrations/{registration}/deactivate [admin.scholarsh
 POST admin/scholarships/registrations/{registration}/reject [admin.scholarships.registrations.reject] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/advising [admin.advising.bookings] {web,auth,prevent-concurrent,role:admin|super_admin}
 PUT admin/advising/bookings/{booking} [admin.advising.bookings.update] {web,auth,prevent-concurrent,role:admin|super_admin}
+POST admin/advising/bookings/{booking}/crm [admin.advising.bookings.crm] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/advising/availability [admin.advising.availability] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/advising/availability [admin.advising.availability.store] {web,auth,prevent-concurrent,role:admin|super_admin}
 PUT admin/advising/availability/{rule} [admin.advising.availability.update] {web,auth,prevent-concurrent,role:admin|super_admin}

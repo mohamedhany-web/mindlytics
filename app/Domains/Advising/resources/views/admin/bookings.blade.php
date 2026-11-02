@@ -56,6 +56,14 @@
                         <div class="flex gap-2"><dt class="w-32 text-slate-500 font-bold">الإيميل</dt><dd dir="ltr">{{ $b->email ?: '—' }}</dd></div>
                         <div class="flex gap-2"><dt class="w-32 text-slate-500 font-bold">عن وضعه</dt><dd class="whitespace-pre-line">{{ $b->notes ?: '—' }}</dd></div>
                         <div class="flex gap-2"><dt class="w-32 text-slate-500 font-bold">اتحجز</dt><dd>{{ $b->created_at->format('d/m/Y H:i') }}</dd></div>
+                        <div class="flex gap-2"><dt class="w-32 text-slate-500 font-bold">في الـ CRM</dt><dd>
+                            @if($b->lead)
+                                <a href="{{ route('admin.crm.leads.show', $b->lead->id) }}" class="font-bold text-violet-700 underline">{{ $b->lead->name }}</a>
+                                <span class="text-slate-500">— {{ $b->lead->assignee?->name ?? 'من غير موظف' }}</span>
+                            @else
+                                <form method="post" action="{{ route('admin.advising.bookings.crm', $b) }}" class="inline">@csrf<button class="text-xs font-bold text-violet-700 underline">مش مربوط — اربطه بالـ CRM</button></form>
+                            @endif
+                        </dd></div>
                         <div class="flex gap-2 pt-2">
                             <a href="https://wa.me/{{ preg_replace('/\D+/', '', $b->phone) }}" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-lg border border-emerald-300 text-emerald-800 text-xs font-bold">واتساب</a>
                             <a href="tel:{{ preg_replace('/[^\d+]/', '', $b->phone) }}" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 text-xs font-bold">اتصال</a>

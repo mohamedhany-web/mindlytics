@@ -67,6 +67,16 @@
                 <label class="{{ $label }}">أقل وقت قبل الجلسة (ساعات)
                     <input type="number" name="min_notice_hours" min="0" max="72" value="{{ $settings['min_notice_hours'] }}" class="{{ $input }}">
                 </label>
+                <div class="border-t border-slate-100 pt-4 space-y-3">
+                    <label class="flex items-center gap-2 text-sm font-bold"><input type="checkbox" name="crm_sync" value="1" @checked($settings['crm_sync'])> كل حجز يتسجّل عميل محتمل في الـ CRM</label>
+                    <label class="{{ $label }}">موظف المبيعات اللي يستلم الحجوزات الجديدة
+                        <select name="crm_assignee_id" class="{{ $input }}">
+                            <option value="">طابور «من غير موظف» (المدير يوزّع)</option>
+                            @foreach($salesStaff as $u)<option value="{{ $u->id }}" @selected($settings['crm_assignee_id'] === $u->id)>{{ $u->name }}</option>@endforeach
+                        </select>
+                        <span class="font-normal text-slate-500">لو مرشد الجلسة موظف مبيعات، العميل بيروحله هو. ولو العميل موجود قبل كده، بيفضل مع صاحبه.</span>
+                    </label>
+                </div>
                 <button class="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-bold">حفظ</button>
             </form>
 
