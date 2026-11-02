@@ -91,13 +91,16 @@ class LandingController extends Controller
             'featuredCourses'
         );
 
-        $homeDiploma = SalesDiplomaBoardEntry::query()->active()->ordered()->first();
+        $homeDiploma = SalesDiplomaBoardEntry::query()->active()->ordered()->with('academicYear')->first();
+        $homeIntakes = $this->homeIntakes();
 
         return view('home.index', $data + [
             'homeDiploma' => $homeDiploma,
-            'homeIntakes' => $this->homeIntakes(),
-            'homeInstructors' => InstructorProfile::approved()->with('user')->orderBy('created_at')->limit(3)->get()
-                ->filter(fn (InstructorProfile $p) => $p->user !== null)->values(),
+            'homeIntakes' => $homeIntakes,
+            // نفس شرط صفحة المحاضر (InstructorController@show) عشان الرابط ما يرجعش 404
+            'homeInstructors' => InstructorProfile::approved()->with('user')->orderBy('created_at')->limit(6)->get()
+                ->filter(fn (InstructorProfile $p) => $p->user !== null && $p->user->isInstructor())->take(3)->values(),
+            'homeFacts' => $this->homeFacts($homeIntakes),
         ]);
     }
 
@@ -107,6 +110,22 @@ class LandingController extends Controller
      *
      * @return Collection<int, array{kind: string, type: string, name: string, start: ?string, days: ?string, mode: string, mode_key: string, price: ?string, url: ?string}>
      */
+    /**
+     * حقائق بتظهر في الرئيسية (الحضوري، التقسيط) بتتحسب من البيانات بدل ما تتكتب ثابتة.
+     *
+     * @return array{campus: bool, installments: bool}
+     */
+    private function homeFacts(Collection $intakes): array
+    {
+        $campus = $intakes->contains('mode_key', 'campus')
+            || OfflineCourse::query()->where('is_active', true)->where('status', 'active')->visibleOnCurrentHost()->exists();
+
+        return [
+            'campus' => $campus,
+            'installments' => \App\Domains\Accounting\Models\InstallmentPlan::query()->where('is_active', true)->exists(),
+        ];
+    }
+
     private function homeIntakes(): Collection
     {
         $ar = app()->getLocale() === 'ar';
@@ -119,9 +138,19 @@ class LandingController extends Controller
                 default => ['online', filled($format) ? (string) $format : ($ar ? 'أونلاين مباشر' : 'Live online')],
             };
         };
-        $price = fn ($online) => $online !== null && (float) $online > 0 ? number_format((float) $online, 0).($ar ? ' ج.م' : ' EGP') : null;
+        // السعر من نفس مصدر الـ checkout (المسار أو الكورس المربوط)، وإلا سعر اللوحة
+        $price = fn (?float $amount) => match (true) {
+            $amount === null => null,
+            $amount <= 0 => $ar ? 'مجاني' : 'Free',
+            default => number_format($amount, 0).($ar ? ' ج.م' : ' EGP'),
+        };
+        $plan = function (SalesCourseBoardEntry $e) use ($ar): ?string {
+            $p = $e->installmentPlan();
 
-        $diplomas = SalesDiplomaBoardEntry::query()->active()->ordered()->limit(12)->get()
+            return $p && (int) $p->installments_count > 1 ? ($ar ? 'تقسيط على '.$p->installments_count.' أقساط' : $p->installments_count.' instalments') : null;
+        };
+
+        $diplomas = SalesDiplomaBoardEntry::query()->active()->ordered()->with('academicYear')->limit(12)->get()
             ->map(function (SalesDiplomaBoardEntry $e) use ($mode, $price, $ar) {
                 [$key, $label] = $mode($e->format);
 
@@ -129,18 +158,18 @@ class LandingController extends Controller
                     'kind' => 'diploma', 'type' => $ar ? 'دبلومة' : 'Diploma', 'name' => (string) $e->name,
                     'start' => $e->startDisplay(), 'sort' => $e->starts_at?->timestamp ?? PHP_INT_MAX,
                     'days' => filled($e->schedule_days) ? (string) $e->schedule_days : null,
-                    'mode' => $label, 'mode_key' => $key, 'price' => $price($e->price_online), 'url' => $e->landingUrl(),
+                    'mode' => $label, 'mode_key' => $key, 'price' => $price($e->publicPrice()), 'url' => $e->detailsUrl(), 'installments' => null,
                 ];
             });
 
-        $courses = SalesCourseBoardEntry::query()->active()->ordered()->limit(12)->get()
-            ->map(function (SalesCourseBoardEntry $e) use ($mode, $price, $ar) {
+        $courses = SalesCourseBoardEntry::query()->active()->ordered()->with('advancedCourse')->limit(12)->get()
+            ->map(function (SalesCourseBoardEntry $e) use ($mode, $price, $plan, $ar) {
                 [$key, $label] = $mode($e->format);
                 return [
                     'kind' => 'course', 'type' => $ar ? 'كورس' : 'Course', 'name' => (string) $e->name,
                     'start' => $e->startDisplay(), 'sort' => $e->starts_at?->timestamp ?? PHP_INT_MAX - 1,
                     'days' => filled($e->schedule_days) ? (string) $e->schedule_days : null,
-                    'mode' => $label, 'mode_key' => $key, 'price' => $price($e->price_online), 'url' => $e->landingUrl(),
+                    'mode' => $label, 'mode_key' => $key, 'price' => $price($e->publicPrice()), 'url' => $e->detailsUrl(), 'installments' => $plan($e),
                 ];
             });
 

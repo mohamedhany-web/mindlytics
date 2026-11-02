@@ -115,6 +115,7 @@
 </style>
 @endpush
 
+{{-- السعر الأونلاين من نفس مصدر الـ checkout (المسار/الكورس المربوط) عن طريق publicPrice(). --}}
 @section('content')
 @php
     $metaChips = array_values(array_filter([
@@ -243,13 +244,13 @@
                     <p class="text-sm font-bold text-blue-100 mb-1">الاستثمار في الكورس</p>
                     <h2 class="text-2xl font-black mb-6">{{ $entry->name }}</h2>
 
-                    @if($entry->price_online || $entry->price_recorded)
+                    @if($entry->publicPrice() !== null || $entry->price_recorded)
                         <div class="space-y-3 mb-6">
-                            @if($entry->price_online)
+                            @if($entry->publicPrice() !== null)
                                 <div class="price-tag p-4 flex items-end justify-between gap-3">
                                     <div>
                                         <p class="text-xs font-bold text-blue-100 mb-1">أونلاين · Live</p>
-                                        <p class="text-3xl font-black leading-none">{{ number_format((float) $entry->price_online, 0) }}</p>
+                                        <p class="text-3xl font-black leading-none">{{ ($entry->publicPrice() > 0 ? number_format($entry->publicPrice(), 0) : 'مجاني') }}</p>
                                     </div>
                                     <span class="text-sm font-bold opacity-80">ج.م</span>
                                 </div>
