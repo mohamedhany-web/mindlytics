@@ -45,7 +45,7 @@
     <form method="get" class="flex flex-wrap gap-3 items-end bg-white p-4 rounded-xl border border-gray-200">
         <div>
             <label class="block text-xs text-gray-500 mb-1">العرض</label>
-            <select name="view" class="border rounded-lg px-3 py-2 text-sm">
+            <select name="view" aria-label="طريقة العرض" class="border rounded-lg px-3 py-2 text-sm">
                 <option value="month" @selected($view === 'month')>شهر محدد</option>
                 <option value="all" @selected($view === 'all')>كل الفترات</option>
             </select>
@@ -53,7 +53,7 @@
         @if($view === 'month')
         <div>
             <label class="block text-xs text-gray-500 mb-1">الشهر</label>
-            <input type="month" name="year_month" value="{{ $yearMonth }}" class="border rounded-lg px-3 py-2 text-sm">
+            <input type="month" name="year_month" aria-label="الشهر" value="{{ $yearMonth }}" class="border rounded-lg px-3 py-2 text-sm">
         </div>
         @endif
         <button type="submit" class="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm">تطبيق</button>

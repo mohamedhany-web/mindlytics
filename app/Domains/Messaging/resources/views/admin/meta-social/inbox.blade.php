@@ -39,7 +39,7 @@
     {{-- Top bar — Business Suite style --}}
     <header class="bs-topbar shrink-0">
         <div class="bs-topbar__brand">
-            <button type="button" x-on:click="$dispatch('open-sidebar')" class="lg:hidden bs-icon-btn">
+            <button type="button" x-on:click="$dispatch('open-sidebar')" aria-label="فتح القائمة" class="lg:hidden bs-icon-btn">
                 <i class="fas fa-bars"></i>
             </button>
             <div class="bs-meta-mark"><i class="fab fa-meta"></i></div>
@@ -139,7 +139,7 @@
                 </div>
 
                 <div class="bs-filters-row">
-                    <select class="bs-select bs-select--sm" onchange="metaInboxNav({assigned_to: this.value})">
+                    <select class="bs-select bs-select--sm" aria-label="الموظف المسؤول" onchange="metaInboxNav({assigned_to: this.value})">
                         <option value="">كل الموظفين</option>
                         <option value="unassigned" @selected(($assignedFilter ?? '') === 'unassigned')>غير معيّن</option>
                         @foreach(($agents ?? []) as $agent)

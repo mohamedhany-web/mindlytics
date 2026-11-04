@@ -74,7 +74,9 @@ class SalesFlowsSmokeTest extends SmokeTestCase
         ]));
         $this->assertSame('offer_sent', $lead->fresh()->stage);
 
-        $this->actingAs($this->rep)->get("/employee/sales/leads/{$lead->id}")->assertOk()->assertSee('Smoke Lifecycle Lead');
+        // صفحة العميل القديمة بقت بتحوّل لملفه في الـ CRM
+        $this->actingAs($this->rep)->get("/employee/sales/leads/{$lead->id}")->assertRedirect("/employee/crm/leads/{$lead->id}");
+        $this->actingAs($this->rep)->get("/employee/crm/leads/{$lead->id}")->assertOk()->assertSee('Smoke Lifecycle Lead');
 
         // تغيير المرحلة من نموذج التعديل ممنوع (لازم من الـ Pipeline)
         $this->actingAs($this->rep)->put("/employee/sales/leads/{$lead->id}", $this->leadPayload('Smoke Lifecycle Lead', ['stage' => SalesLead::WON_STAGE, 'phone' => $lead->phone]))

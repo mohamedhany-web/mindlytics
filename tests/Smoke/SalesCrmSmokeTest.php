@@ -144,7 +144,7 @@ class SalesCrmSmokeTest extends SmokeTestCase
             $this->page('/admin/crm/leads?quick='.$quick);
         }
         $this->page('/admin/crm/leads?q=Smoke%20CRM')->assertSee('Smoke CRM Rep Lead')->assertSee('Smoke CRM Outsider Lead');
-        $this->page('/admin/crm/leads/'.$this->outsiderLead->id)->assertSee('فتح في الواجهة الكلاسيكية');
+        $this->page('/admin/crm/leads/'.$this->outsiderLead->id)->assertSee('Smoke CRM Outsider Lead');
         $this->page('/admin/crm/deals?quick=all');
         $this->page('/admin/crm/deals/'.$this->repLead->id);
         $this->page('/admin/crm/leads/'.$this->repLead->id.'/convert');
@@ -182,7 +182,12 @@ class SalesCrmSmokeTest extends SmokeTestCase
             $this->page($ctx['prefix'].'/leads/create');
             if ($ctx['admin']) {
                 $this->page($ctx['prefix'].'/admin');
-                $this->page($ctx['prefix'].'/win-approvals');
+                // اعتماد الفوز للأدمن بس (CrmModuleController::winApprovals)، ومش ظاهر في قايمة المدير
+                if ($ctx['prefix'] === '/admin/crm') {
+                    $this->page($ctx['prefix'].'/win-approvals');
+                } else {
+                    $this->get($ctx['prefix'].'/win-approvals')->assertForbidden();
+                }
             } else {
                 $this->get($ctx['prefix'].'/admin')->assertForbidden();
             }

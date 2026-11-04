@@ -24,11 +24,11 @@
         <form method="get" action="{{ route('employee.sales.reports.index') }}" class="relative z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
             <div>
                 <label class="block text-xs font-bold text-gray-600 mb-1">من تاريخ</label>
-                <input type="date" name="date_from" value="{{ $dateFrom }}" class="w-full rounded-xl border-2 border-gray-200 px-3 py-2 text-sm focus:border-emerald-500" required>
+                <input type="date" name="date_from" aria-label="من تاريخ" value="{{ $dateFrom }}" class="w-full rounded-xl border-2 border-gray-200 px-3 py-2 text-sm focus:border-emerald-500" required>
             </div>
             <div>
                 <label class="block text-xs font-bold text-gray-600 mb-1">إلى تاريخ</label>
-                <input type="date" name="date_to" value="{{ $dateTo }}" class="w-full rounded-xl border-2 border-gray-200 px-3 py-2 text-sm focus:border-emerald-500" required>
+                <input type="date" name="date_to" aria-label="إلى تاريخ" value="{{ $dateTo }}" class="w-full rounded-xl border-2 border-gray-200 px-3 py-2 text-sm focus:border-emerald-500" required>
             </div>
             <div class="md:col-span-2">
                 <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-md">

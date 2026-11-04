@@ -130,8 +130,8 @@
                     <div class="grid sm:grid-cols-3 gap-3 mt-3">
                         @foreach(['messages_replied' => 'ردود رسائل', 'leads_qualified' => 'عملاء مؤهّلون', 'bookings_from_leads' => 'حجوزات'] as $key => $label)
                             <div>
-                                <label class="block text-xs font-medium text-slate-600 mb-1">{{ $label }}</label>
-                                <input type="number" min="0" name="{{ $key }}" value="{{ old($key, $r?->$key ?? 0) }}" required class="dr-input px-3 py-2 text-sm">
+                                <label for="dr-{{ $key }}" class="block text-xs font-medium text-slate-600 mb-1">{{ $label }}</label>
+                                <input id="dr-{{ $key }}" type="number" min="0" name="{{ $key }}" value="{{ old($key, $r?->$key ?? 0) }}" required class="dr-input px-3 py-2 text-sm">
                             </div>
                         @endforeach
                     </div>
@@ -146,14 +146,14 @@
                     <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-3 mt-3">
                         @foreach(['numbers_worked' => 'أشخاص تم العمل عليهم', 'followups_done' => 'متابعات', 'calls_made' => 'مكالمات', 'meetings_held' => 'اجتماعات', 'calls_answered' => 'ردود مكالمات'] as $key => $label)
                             <div>
-                                <label class="block text-xs font-medium text-slate-600 mb-1">{{ $label }}</label>
-                                <input type="number" min="0" name="{{ $key }}" value="{{ old($key, $r?->$key ?? 0) }}" required class="dr-input px-3 py-2 text-sm">
+                                <label for="dr-{{ $key }}" class="block text-xs font-medium text-slate-600 mb-1">{{ $label }}</label>
+                                <input id="dr-{{ $key }}" type="number" min="0" name="{{ $key }}" value="{{ old($key, $r?->$key ?? 0) }}" required class="dr-input px-3 py-2 text-sm">
                             </div>
                         @endforeach
                     </div>
                     <div class="mt-3 dr-manual rounded-lg border p-3">
-                        <label class="block text-xs font-bold text-amber-900 mb-1">ملاحظات الإنتاجية — اختياري</label>
-                        <textarea name="productivity_notes" rows="2" class="dr-input px-3 py-2 text-sm">{{ old('productivity_notes', $r?->productivity_notes) }}</textarea>
+                        <label for="dr-productivity_notes" class="block text-xs font-bold text-amber-900 mb-1">ملاحظات الإنتاجية — اختياري</label>
+                        <textarea id="dr-productivity_notes" name="productivity_notes" rows="2" class="dr-input px-3 py-2 text-sm">{{ old('productivity_notes', $r?->productivity_notes) }}</textarea>
                     </div>
                 </section>
 
@@ -244,8 +244,8 @@
                                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                                     @foreach($campaignFieldLabels as $key => $label)
                                         <div>
-                                            <label class="block text-xs font-medium text-slate-600 mb-1">{{ $label }}</label>
-                                            <input type="number" min="0"
+                                            <label for="dr-c{{ $campaign->id }}-{{ $key }}" class="block text-xs font-medium text-slate-600 mb-1">{{ $label }}</label>
+                                            <input id="dr-c{{ $campaign->id }}-{{ $key }}" type="number" min="0"
                                                    name="campaigns[{{ $campaign->id }}][{{ $key }}]"
                                                    value="{{ old('campaigns.'.$campaign->id.'.'.$key, $entry?->$key ?? 0) }}"
                                                    class="dr-input px-3 py-2 text-sm">

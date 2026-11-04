@@ -57,13 +57,13 @@
                 @method('PUT')
                 <div class="grid md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">الاسم</label>
-                        <input type="text" name="name" value="{{ old('name', $group->name) }}" required class="px-3 py-2.5" @disabled($group->is_admin_managed)>
+                        <label for="group-name" class="block text-sm font-medium text-slate-700 mb-1">الاسم</label>
+                        <input id="group-name" type="text" name="name" value="{{ old('name', $group->name) }}" required class="px-3 py-2.5" @disabled($group->is_admin_managed)>
                         @if($group->is_admin_managed)<p class="text-xs text-slate-500 mt-1">اسم مجموعات الإدارة لا يُعدَّل</p>@endif
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">وصف</label>
-                        <input type="text" name="description" value="{{ old('description', $group->description) }}" class="px-3 py-2.5">
+                        <label for="group-description" class="block text-sm font-medium text-slate-700 mb-1">وصف</label>
+                        <input id="group-description" type="text" name="description" value="{{ old('description', $group->description) }}" class="px-3 py-2.5">
                     </div>
                 </div>
 

@@ -14,7 +14,7 @@
         {{-- الحالة والقسم --}}
         <div class="space-y-2">
             <label class="text-xs font-bold text-slate-600">حالة المحادثة</label>
-            <select x-model="crmStatus" @change="updateCrmStatus()"
+            <select aria-label="حالة المحادثة" x-model="crmStatus" @change="updateCrmStatus()"
                     class="w-full rounded-lg border-slate-200 text-sm py-2">
                 @foreach($crmStatuses as $key => $label)
                     <option value="{{ $key }}">{{ $label }}</option>
@@ -24,7 +24,7 @@
 
         <div class="space-y-2" x-show="activeConversation?.crm?.sales_lead_id">
             <label class="text-xs font-bold text-slate-600">مرحلة Pipeline</label>
-            <select x-model="crmLeadStage" @change="updateLeadStage()"
+            <select aria-label="مرحلة العميل" x-model="crmLeadStage" @change="updateLeadStage()"
                     class="w-full rounded-lg border-slate-200 text-sm py-2">
                 <option value="">— غير مرتبط —</option>
                 @foreach($pipelineStages ?? [] as $key => $label)
@@ -65,7 +65,7 @@
             </div>
 
             <div class="flex gap-1.5">
-                <input type="datetime-local" x-model="crmNextFollowAt"
+                <input type="datetime-local" aria-label="المتابعة الجاية" x-model="crmNextFollowAt"
                        class="flex-1 rounded-lg border-teal-200 text-xs py-1.5 bg-white">
                 <button type="button" @click="saveNextFollow()" :disabled="crmSaving || !crmNextFollowAt"
                         class="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold disabled:opacity-40">

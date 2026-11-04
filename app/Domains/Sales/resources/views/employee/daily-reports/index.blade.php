@@ -60,7 +60,7 @@
         <form method="get" class="flex flex-wrap gap-3 items-end">
             <div>
                 <label class="block text-xs font-bold text-gray-500 mb-1">تاريخ</label>
-                <input type="date" name="date" value="{{ $date->toDateString() }}" max="{{ today()->toDateString() }}" class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                <input type="date" name="date" aria-label="تاريخ التقرير" value="{{ $date->toDateString() }}" max="{{ today()->toDateString() }}" class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
             </div>
             <button type="submit" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-semibold">عرض</button>
         </form>

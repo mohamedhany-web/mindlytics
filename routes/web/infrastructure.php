@@ -127,3 +127,21 @@ Route::get('/images/home/{asset}', function (string $asset) {
         'Cache-Control' => 'public, max-age=31536000, immutable',
     ]);
 })->where('asset', '[A-Za-z0-9_-]+\.(jpg|jpeg|png|webp|avif|svg)')->name('site.image')->middleware('web');
+
+/*
+|--------------------------------------------------------------------------
+| Stylesheets and scripts (public/css, public/js)
+| Serves them from the project when the host's public_html does not have them (e.g. the CRM stylesheet).
+|--------------------------------------------------------------------------
+*/
+Route::get('/{dir}/{asset}', function (string $dir, string $asset) {
+    $filePath = public_path($dir.'/'.basename($asset));
+    if (! @is_file($filePath) || ! @is_readable($filePath)) {
+        abort(404, 'Asset not found');
+    }
+
+    return response()->file($filePath, [
+        'Content-Type' => $dir === 'css' ? 'text/css; charset=UTF-8' : 'application/javascript; charset=UTF-8',
+        'Cache-Control' => 'public, max-age=604800',
+    ]);
+})->where(['dir' => 'css|js', 'asset' => '[A-Za-z0-9._-]+\.(css|js)'])->name('site.static-asset')->middleware('web');

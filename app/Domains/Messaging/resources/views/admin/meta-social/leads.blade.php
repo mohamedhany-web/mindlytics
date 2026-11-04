@@ -50,7 +50,7 @@
 <div class="lc-page" x-data="metaLeadCenter()" :class="{ 'has-selection': detail && viewMode === 'list' }" x-cloak>
     <header class="lc-topbar">
         <div class="lc-topbar__brand">
-            <button type="button" x-on:click="$dispatch('open-sidebar')" class="lg:hidden lc-icon-btn"><i class="fas fa-bars"></i></button>
+            <button type="button" x-on:click="$dispatch('open-sidebar')" aria-label="فتح القائمة" class="lg:hidden lc-icon-btn"><i class="fas fa-bars"></i></button>
             <div class="lc-mark"><i class="fas fa-user-plus"></i></div>
             <div>
                 <h1 class="lc-topbar__title">Lead Center</h1>

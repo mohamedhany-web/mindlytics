@@ -20,7 +20,7 @@
         <form method="get" class="flex items-end gap-2">
             <div>
                 <label class="block text-xs font-semibold text-slate-600 mb-1">الشهر</label>
-                <input type="month" name="month" value="{{ $month }}" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                <input type="month" name="month" aria-label="الشهر" value="{{ $month }}" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
             </div>
             <button type="submit" class="rounded-xl bg-slate-900 text-white px-4 py-2 text-sm font-bold">عرض</button>
         </form>

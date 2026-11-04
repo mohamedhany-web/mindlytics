@@ -33,6 +33,8 @@
         @if(Route::has($crm->route('activities.create')))
             <a href="{{ route($crm->route('activities.create'), ['type' => 'call']) }}" class="crm-btn crm-btn-outline">＋ مكالمة</a>
         @endif
+        @php($hasLeadActions = $crm->canManage() || ($crm->isAdmin() && $lead->isPendingWinApproval() && Route::has($crm->route('win-approvals.index'))))
+        @if($hasLeadActions)
         <div style="position: relative" @click.outside="actions = false">
             <button type="button" class="crm-btn crm-btn-slate" @click="actions = ! actions" :aria-expanded="actions">إجراءات <i class="fas fa-caret-down"></i></button>
             <div x-cloak x-show="actions" role="menu" style="position: absolute; left: 0; top: 34px; width: 220px; background: #627587; box-shadow: 0 4px 10px rgba(0,0,0,.3); padding: 4px 0; z-index: 40">
@@ -43,6 +45,7 @@
                 @if($crm->isAdmin() && $lead->isPendingWinApproval() && Route::has($crm->route('win-approvals.index')))<a role="menuitem" href="{{ route($crm->route('win-approvals.index')) }}" style="display: block; padding: 8px 14px; color: #fff; font-size: 13px">اعتماد الفوز والعمولة</a>@endif
             </div>
         </div>
+        @endif
     </div>
 
     @if($transferAction)

@@ -72,6 +72,7 @@ POST webhooks/meta-social [webhooks.meta-social.handle] {web}
 GET|HEAD storage/{path} [storage.file] {web,web}
 GET|HEAD images/student-portal/{asset} [student-portal.asset] {web,web}
 GET|HEAD images/home/{asset} [site.image] {web,web}
+GET|HEAD {dir}/{asset} [site.static-asset] {web,web}
 GET|HEAD careers [careers.index] {web}
 GET|HEAD careers/{job} [careers.show] {web}
 GET|HEAD careers/{job}/apply [careers.apply.form] {web}
