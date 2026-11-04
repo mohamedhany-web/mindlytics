@@ -15,6 +15,7 @@
     }
 @endphp
 
+@include('sales::crm.partials.module-header', ['title' => 'شيفتات وقنوات الفريق', 'subtitle' => 'مين على الشيفت دلوقتي، وقنوات كل موظف، وطلبات التبديل.'])
 <div class="space-y-6">
     @if(! $plan)
         <div class="rounded-2xl bg-amber-50 border border-amber-200 p-6 text-sm text-amber-900">

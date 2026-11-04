@@ -488,6 +488,8 @@ GET|HEAD employee/sales-manager/team/{employee}/report/pdf [employee.sales-manag
 GET|HEAD employee/sales-manager/leads [employee.sales-manager.leads.index] {web,auth,prevent-concurrent,auth,employee.work,sales.manager}
 GET|HEAD employee/sales-manager/leads/{lead} [employee.sales-manager.leads.show] {web,auth,prevent-concurrent,auth,employee.work,sales.manager}
 POST employee/sales-manager/leads/{lead}/transfer [employee.sales-manager.leads.transfer] {web,auth,prevent-concurrent,auth,employee.work,sales.manager}
+POST employee/sales-manager/leads [employee.sales-manager.leads.store] {web,auth,prevent-concurrent,auth,employee.work,sales.manager}
+PUT employee/sales-manager/leads/{lead} [employee.sales-manager.leads.update] {web,auth,prevent-concurrent,auth,employee.work,sales.manager}
 GET|HEAD employee/sales-manager/distribution [employee.sales-manager.distribution.index] {web,auth,prevent-concurrent,auth,employee.work,sales.manager}
 POST employee/sales-manager/distribution/{lead}/assign [employee.sales-manager.distribution.assign] {web,auth,prevent-concurrent,auth,employee.work,sales.manager}
 GET|HEAD employee/sales-manager/org-chart [employee.sales-manager.org-chart.index] {web,auth,prevent-concurrent,auth,employee.work,sales.manager}

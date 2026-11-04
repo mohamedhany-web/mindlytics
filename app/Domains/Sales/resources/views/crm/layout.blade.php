@@ -169,7 +169,12 @@
                 @foreach($errors->all() as $err)<div>{{ $err }}</div>@endforeach
             </div>
         @endif
-        @yield('content')
+        @php($crmPageBody = trim($__env->yieldContent('content')))
+        {{-- صفحات الإدارة/المدير القديمة بتحط عنوانها في @section('header'): يظهر لو الصفحة نفسها ما فيهاش عنوان --}}
+        @if(trim($__env->yieldContent('header')) !== '' && ! preg_match('/<h1\b|<h2\b|crm-module-header/', $crmPageBody))
+            <div class="crm-module-header"><div><h1 class="crm-title">@yield('header')</h1></div></div>
+        @endif
+        {!! $crmPageBody !!}
     </main>
 
     @stack('scripts')
@@ -177,5 +182,6 @@
         @include('components.employee-presence-heartbeat')
         @include('components.sales-team-chat-widget')
     @endunless
+    @include('components.form-label-links')
 </body>
 </html>

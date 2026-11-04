@@ -154,9 +154,10 @@ class SalesCrmController extends Controller
             ]),
             'interestTypes' => SalesInterestType::query()->orderBy('sort_order')->get(['id', 'name_ar']),
             'members' => $scope->isRep() ? collect([$scope->user]) : $scope->members(),
+            'categories' => $scope->isRep() ? collect() : \App\Domains\Sales\Models\SalesLeadCategory::query()->active()->ordered()->get(['id', 'name']),
             'storeRoute' => $scope->isAdmin() && \Illuminate\Support\Facades\Route::has('admin.sales.leads.store')
                 ? route('admin.sales.leads.store')
-                : route('employee.sales.leads.store'),
+                : ($scope->isManager() ? route('employee.sales-manager.leads.store') : route('employee.sales.leads.store')),
         ]);
     }
 
@@ -170,9 +171,10 @@ class SalesCrmController extends Controller
             'lead' => $lead,
             'interestTypes' => SalesInterestType::query()->orderBy('sort_order')->get(['id', 'name_ar']),
             'members' => $scope->isRep() ? collect([$scope->user]) : $scope->members(),
+            'categories' => $scope->isRep() ? collect() : \App\Domains\Sales\Models\SalesLeadCategory::query()->active()->ordered()->get(['id', 'name']),
             'storeRoute' => $scope->isAdmin() && \Illuminate\Support\Facades\Route::has('admin.sales.leads.update')
                 ? route('admin.sales.leads.update', $lead)
-                : route('employee.sales.leads.update', $lead),
+                : ($scope->isManager() ? route('employee.sales-manager.leads.update', $lead) : route('employee.sales.leads.update', $lead)),
         ]);
     }
 

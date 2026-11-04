@@ -11,14 +11,22 @@ use Illuminate\Support\Facades\DB;
 
 final class CrmAccessService
 {
+    private static ?bool $tableReady = null;
+
+    private static function tableReady(): bool
+    {
+        return self::$tableReady ??= \Illuminate\Support\Facades\Schema::hasTable('crm_feature_access');
+    }
+
     /** @return array<string, bool> feature_key => allowed */
     public function effectiveMap(User $user, ?CrmScope $scope = null): array
     {
         $scope ??= CrmScope::for($user, $user->isAdmin() || $user->isSuperAdmin() || ($user->role ?? '') === 'admin');
         $role = $scope->role;
-        $overrides = CrmFeatureAccess::query()
-            ->where('user_id', $user->id)
-            ->pluck('allowed', 'feature_key');
+        // لو جدول الاستثناءات لسه ما اتعملش (migration ما اشتغلش) الصلاحيات الافتراضية للدور بتشتغل بدل ما الصفحة تقع
+        $overrides = self::tableReady()
+            ? CrmFeatureAccess::query()->where('user_id', $user->id)->pluck('allowed', 'feature_key')
+            : collect();
 
         $map = [];
         foreach (CrmFeatureCatalog::all() as $feature) {

@@ -43,6 +43,15 @@
 @endforeach
 </select>
 </label>
+@if(($categories ?? collect())->isNotEmpty())
+<label class="crm-label">التصنيف
+<select class="crm-select" name="category_id" required>
+@foreach($categories as $cat)
+<option value="{{ $cat->id }}" @selected((int)old('category_id', $lead->category_id ?? \App\Domains\Sales\Models\SalesLeadCategory::defaultGeneralId())===(int)$cat->id)>{{ $cat->name }}</option>
+@endforeach
+</select>
+</label>
+@endif
 @endif
 <label class="crm-label" style="grid-column:1/-1">ملاحظات<textarea class="crm-textarea" name="notes" rows="3">{{ old('notes', $lead->notes) }}</textarea></label>
 <label class="crm-label" style="grid-column:1/-1">الاهتمام / التفاصيل<textarea class="crm-textarea" name="interest" rows="2">{{ old('interest', $lead->interest) }}</textarea></label>

@@ -314,17 +314,10 @@ class SalesManagerReportsKpiPortalTest extends TestCase
     {
         ['manager' => $manager, 'bd' => $bd] = $this->seedTeam();
 
-        $this->actingAs($manager)
-            ->get(route('employee.sales-manager.dashboard'))
-            ->assertOk()
-            ->assertSee('مركز التقارير والمؤشرات', false)
-            ->assertSee('تقارير الكامبين', false)
-            ->assertSee('أهداف KPIs', false);
-
-        $this->actingAs($bd)
-            ->get(route('employee.sales-manager.dashboard'))
-            ->assertOk()
-            ->assertSee('مركز التقارير والمؤشرات', false);
+        // لوحة المدير بقت في الـ CRM؛ التقارير والمؤشرات ليها صفحاتها (تحت)
+        foreach ([$manager, $bd] as $user) {
+            $this->actingAs($user)->get(route('employee.sales-manager.dashboard'))->assertRedirect(route('employee.crm.home'));
+        }
     }
 
     public function test_campaign_reports_page_and_export(): void

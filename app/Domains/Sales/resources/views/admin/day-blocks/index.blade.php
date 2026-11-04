@@ -21,16 +21,16 @@
             <form method="post" action="{{ route('admin.sales.day-blocks.store') }}" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 p-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50">
                 @csrf
                 <input type="text" name="name" placeholder="اسم البلوك" required class="rounded-xl border-slate-200 text-sm">
-                <input type="text" name="code" placeholder="code (call_block_1)" required class="rounded-xl border-slate-200 text-sm">
-                <input type="time" name="start_time" required class="rounded-xl border-slate-200 text-sm">
-                <input type="time" name="end_time" required class="rounded-xl border-slate-200 text-sm">
-                <select name="activity_type" required class="rounded-xl border-slate-200 text-sm">
+                <input type="text" name="code" aria-label="الكود" placeholder="code (call_block_1)" required class="rounded-xl border-slate-200 text-sm">
+                <input type="time" name="start_time" aria-label="من" required class="rounded-xl border-slate-200 text-sm">
+                <input type="time" name="end_time" aria-label="إلى" required class="rounded-xl border-slate-200 text-sm">
+                <select name="activity_type" aria-label="نوع النشاط" required class="rounded-xl border-slate-200 text-sm">
                     @foreach(\App\Domains\Sales\Models\SalesDayBlock::ACTIVITY_TYPES as $k => $label)
                         <option value="{{ $k }}">{{ $label }}</option>
                     @endforeach
                 </select>
                 <input type="text" name="goal_text" placeholder="هدف البلوك" class="rounded-xl border-slate-200 text-sm md:col-span-2">
-                <input type="number" name="sort_order" value="100" class="rounded-xl border-slate-200 text-sm" placeholder="ترتيب">
+                <input type="number" name="sort_order" aria-label="الترتيب" value="100" class="rounded-xl border-slate-200 text-sm" placeholder="ترتيب">
                 <label class="inline-flex items-center gap-2 text-sm"><input type="checkbox" name="is_active" value="1" checked class="rounded"> نشط</label>
                 <button type="submit" class="rounded-xl bg-sky-600 text-white font-bold text-sm px-4 py-2">إضافة بلوك</button>
             </form>
@@ -43,23 +43,23 @@
                             @method('PUT')
                             <div class="lg:col-span-1">
                                 <label class="block text-[11px] font-semibold text-slate-500 mb-1">ترتيب</label>
-                                <input type="number" name="sort_order" value="{{ $block->sort_order }}" class="w-full rounded-lg border-slate-200 text-sm">
+                                <input type="number" name="sort_order" aria-label="الترتيب" value="{{ $block->sort_order }}" class="w-full rounded-lg border-slate-200 text-sm">
                             </div>
                             <div class="lg:col-span-2">
                                 <label class="block text-[11px] font-semibold text-slate-500 mb-1">الاسم / code</label>
                                 <input type="text" name="name" value="{{ $block->name }}" class="w-full rounded-lg border-slate-200 text-sm font-semibold">
-                                <input type="text" name="code" value="{{ $block->code }}" class="w-full rounded-lg border-slate-200 text-xs mt-1">
+                                <input type="text" name="code" aria-label="الكود" value="{{ $block->code }}" class="w-full rounded-lg border-slate-200 text-xs mt-1">
                             </div>
                             <div class="lg:col-span-2">
                                 <label class="block text-[11px] font-semibold text-slate-500 mb-1">من — إلى</label>
                                 <div class="flex gap-1">
-                                    <input type="time" name="start_time" value="{{ $block->startTimeHm() }}" class="w-full rounded-lg border-slate-200 text-sm">
-                                    <input type="time" name="end_time" value="{{ $block->endTimeHm() }}" class="w-full rounded-lg border-slate-200 text-sm">
+                                    <input type="time" name="start_time" aria-label="من" value="{{ $block->startTimeHm() }}" class="w-full rounded-lg border-slate-200 text-sm">
+                                    <input type="time" name="end_time" aria-label="إلى" value="{{ $block->endTimeHm() }}" class="w-full rounded-lg border-slate-200 text-sm">
                                 </div>
                             </div>
                             <div class="lg:col-span-2">
                                 <label class="block text-[11px] font-semibold text-slate-500 mb-1">النوع</label>
-                                <select name="activity_type" class="w-full rounded-lg border-slate-200 text-sm">
+                                <select name="activity_type" aria-label="نوع النشاط" class="w-full rounded-lg border-slate-200 text-sm">
                                     @foreach(\App\Domains\Sales\Models\SalesDayBlock::ACTIVITY_TYPES as $k => $label)
                                         <option value="{{ $k }}" @selected($block->activity_type === $k)>{{ $label }}</option>
                                     @endforeach

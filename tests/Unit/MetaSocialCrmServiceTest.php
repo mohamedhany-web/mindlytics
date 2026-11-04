@@ -167,6 +167,8 @@ class MetaSocialCrmServiceTest extends TestCase
         ]);
 
         $this->actingAs($agent);
+        // شرط «موظف مبيعات نشط» بيتختبر في الـ smoke على MySQL؛ هنا الـ schema مصغّر من غير وظائف
+        $this->partialMock(MetaSocialCrmService::class, fn ($m) => $m->shouldReceive('isEligibleAgent')->andReturn(true));
 
         $lead = app(MetaSocialCrmService::class)->createLeadFromConversation(
             $conversation,

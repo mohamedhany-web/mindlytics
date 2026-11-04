@@ -303,14 +303,8 @@ class SalesManagerHubDashboardTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-08-06 12:00:00'));
         ['manager' => $manager, 'rep1' => $rep1] = $this->seedTeam();
 
-        $response = $this->actingAs($manager)->get(route('employee.sales-manager.dashboard'));
-
-        $response->assertOk();
-        $response->assertSee('نظرة تنفيذية', false);
-        $response->assertSee('ترتيب أداء الفريق', false);
-        $response->assertSee('مراقبة مباشرة', false);
-        $response->assertSee($rep1->name, false);
-        $response->assertSee('لوحة الصدارة', false);
+        // لوحة المدير القديمة بقت بتحوّل للوحة الفريق في الـ CRM (أقسام الـ Hub نفسها بتتختبر من الخدمة تحت)
+        $this->actingAs($manager)->get(route('employee.sales-manager.dashboard'))->assertRedirect(route('employee.crm.home'));
 
         Carbon::setTestNow();
     }

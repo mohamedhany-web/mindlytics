@@ -47,6 +47,9 @@ Route::get('team/{employee}/report/pdf', [SalesManagerTeamController::class, 're
 Route::get('leads', fn () => $toCrm('leads.index'))->name('leads.index');
 Route::get('leads/{lead}', fn ($lead) => redirect()->route('employee.crm.leads.show', $lead))->name('leads.show');
 Route::post('leads/{lead}/transfer', [SalesManagerLeadController::class, 'transfer'])->name('leads.transfer');
+// فورم الـ CRM (إضافة/تعديل عميل لموظف في الفريق)
+Route::post('leads', [\App\Domains\Sales\Http\Controllers\Employee\SalesManagerLeadFormController::class, 'store'])->name('leads.store');
+Route::put('leads/{lead}', [\App\Domains\Sales\Http\Controllers\Employee\SalesManagerLeadFormController::class, 'update'])->name('leads.update');
 Route::get('distribution', [SalesManagerDistributionController::class, 'index'])->name('distribution.index');
 Route::post('distribution/{lead}/assign', [SalesManagerDistributionController::class, 'assign'])->name('distribution.assign');
 Route::get('org-chart', [SalesManagerOrgChartController::class, 'index'])->name('org-chart.index');

@@ -202,7 +202,7 @@
                             <thead><tr><th>الموضوع</th><th>النوع</th><th>النتيجة / التفاصيل</th><th>بواسطة</th><th>التاريخ</th></tr></thead>
                             <tbody>
                                 @forelse($history as $act)
-                                    <tr><td style="font-weight: 700">{{ $act->title ?: SalesActivity::typeLabel((string) $act->type) }}</td><td>{{ SalesActivity::typeLabel((string) $act->type) }}</td><td style="max-width: 320px">{{ $act->outcome ? (SalesActivity::OUTCOMES[$act->outcome] ?? $act->outcome) : \Illuminate\Support\Str::limit((string) $act->body, 90) }}</td><td>{{ $act->user?->name ?? 'النظام' }}</td><td class="crm-muted">{{ $act->created_at?->format('d/m H:i') }}</td></tr>
+                                    <tr><td style="font-weight: 700">{{ $act->title ?: SalesActivity::typeLabel((string) $act->type) }}</td><td>{{ SalesActivity::typeLabel((string) $act->type) }}</td><td style="max-width: 320px">@if($act->outcome)<span style="font-weight: 600">{{ SalesActivity::OUTCOMES[$act->outcome] ?? $act->outcome }}</span>@if(filled($act->body))<br>@endif @endif<span title="{{ $act->body }}">{{ \Illuminate\Support\Str::limit((string) $act->body, 140) }}</span></td><td>{{ $act->user?->name ?? 'النظام' }}</td><td class="crm-muted">{{ $act->created_at?->format('d/m H:i') }}</td></tr>
                                 @empty
                                     <tr><td colspan="5" class="crm-muted" style="text-align: center">لا يوجد سجل بعد.</td></tr>
                                 @endforelse
@@ -319,7 +319,7 @@
                     @forelse($history->take(6) as $act)
                         <li style="display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid #F0F1F3">
                             <span aria-hidden="true" style="flex: none; width: 28px; height: 28px; border: 1px solid #627587; border-radius: 4px; color: #627587; display: flex; align-items: center; justify-content: center; font-size: 12px"><i class="fas {{ match ($act->type) { 'call' => 'fa-phone', 'whatsapp' => 'fa-comment', 'meeting' => 'fa-handshake', 'stage_change' => 'fa-right-left', 'email' => 'fa-envelope', default => 'fa-note-sticky' } }}"></i></span>
-                            <div style="display: flex; flex-direction: column; font-size: 12px; min-width: 0"><span style="font-weight: 700">{{ $act->title ?: SalesActivity::typeLabel((string) $act->type) }}</span><span class="crm-muted">{{ $act->user?->name ?? 'النظام' }} · {{ $act->created_at?->format('d/m H:i') }}</span></div>
+                            <div style="display: flex; flex-direction: column; font-size: 12px; min-width: 0"><span style="font-weight: 700">{{ $act->title ?: SalesActivity::typeLabel((string) $act->type) }}</span>@if(filled($act->body))<span style="color: #374151; overflow-wrap: anywhere">{{ \Illuminate\Support\Str::limit((string) $act->body, 160) }}</span>@endif<span class="crm-muted">{{ $act->user?->name ?? 'النظام' }} · {{ $act->created_at?->format('d/m H:i') }}</span></div>
                         </li>
                     @empty
                         <li class="crm-muted" style="padding: 12px 0; text-align: center; font-size: 13px">لا يوجد نشاط بعد.</li>

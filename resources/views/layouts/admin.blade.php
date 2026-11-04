@@ -660,7 +660,7 @@
         <div class="flex flex-col flex-1 min-w-0 {{ $waImmersive ? 'lg:pr-[4.25rem]' : 'lg:pr-64' }} w-full lg:h-screen" style="position: relative !important; z-index: 10 !important; isolation: isolate !important;">
             <!-- Top navigation - Sticky header inside main content -->
             <header class="sticky top-0 z-30 flex-shrink-0 flex h-14 sm:h-16 bg-gradient-to-r from-slate-50 via-blue-50 to-slate-100 shadow-lg border-b border-slate-200/50 bg-white/95 overflow-visible {{ $waImmersive ? 'lg:hidden' : '' }}" style="position: sticky !important; z-index: 30 !important; isolation: isolate !important; overflow: visible !important;">
-                <button @click="sidebarOpen = true" class="px-3 sm:px-4 border-l border-slate-200/50 text-slate-700 hover:bg-slate-100/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-400 lg:hidden transition-colors">
+                <button @click="sidebarOpen = true" aria-label="فتح القائمة" class="px-3 sm:px-4 border-l border-slate-200/50 text-slate-700 hover:bg-slate-100/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-400 lg:hidden transition-colors">
                     <i class="fas fa-bars text-base sm:text-lg"></i>
                 </button>
                 
@@ -1129,6 +1129,7 @@
             transform-origin: top right;
         }
     </style>
+    @include('components.form-label-links')
 </body>
 </html>
 
