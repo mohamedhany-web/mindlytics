@@ -151,9 +151,12 @@
                         <h3 style="margin:0;font-size:13px;font-weight:700">تحريك المرحلة (Pipeline)</h3>
                         <div style="display:grid;gap:10px;grid-template-columns:1fr 1fr">
                             <label class="crm-label">المرحلة الجديدة
+                                @php($nextStages = app(\App\Domains\Sales\Services\SalesPipelineService::class)->allowedNextStages($lead))
+                                {{-- المراحل المسموح الانتقال ليها من المرحلة الحالية بس (نفس قواعد SalesPipelineService) --}}
                                 <select class="crm-select" name="stage" required>
-                                    @foreach(SalesLead::STAGES as $k => $v)
-                                        <option value="{{ $k }}" @selected($lead->stage === $k)>{{ $v }}</option>
+                                    <option value="" disabled selected>الحالية: {{ SalesLead::STAGES[$lead->stage] ?? $lead->stage }} — اختار التالية</option>
+                                    @foreach($nextStages as $k)
+                                        <option value="{{ $k }}">{{ SalesLead::STAGES[$k] ?? $k }}</option>
                                     @endforeach
                                 </select>
                             </label>

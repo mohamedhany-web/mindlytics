@@ -50,6 +50,12 @@ class SalesRepOperationsSmokeTest extends SmokeTestCase
             'interest_type_id' => $lead->interest_type_id, 'follow_up_channel' => 'call', 'next_follow_up_at' => now()->addDays(4)->format('Y-m-d\TH:i'),
         ]));
         $this->page('lead after updates', route('employee.crm.leads.show', $lead->id));
+        // قايمة تحريك المرحلة فيها المراحل المسموحة من المرحلة الحالية بس
+        $allowed = app(\App\Domains\Sales\Services\SalesPipelineService::class)->allowedNextStages($lead->fresh());
+        $stageSelect = [];
+        preg_match('#<select class="crm-select" name="stage" required>(.*?)</select>#s', (string) $this->get(route('employee.crm.leads.show', $lead->id))->getContent(), $stageSelect);
+        preg_match_all('#<option value="([a-z_]+)"#', $stageSelect[1] ?? '', $opts);
+        $this->assertSame($allowed, $opts[1]);
         if (! $rep->hasSalesManagerPortalAccess()) {
             // قايمة «إجراءات» كلها للمدير: ما تظهرش فاضية للموظف
             $this->get(route('employee.crm.leads.show', $lead->id))->assertDontSee('@click="actions = ! actions"', false);
