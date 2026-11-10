@@ -121,6 +121,7 @@ final class CrmNavigation
                     $scope->isRep() ? ['التقرير اليومي', 'employee.sales.daily-reports.index'] : null,
                     $scope->isManager() ? ['تقارير يومية', 'employee.sales-manager.daily-reports.index'] : null,
                     $scope->isRep() ? ['العمولات', 'employee.sales.commissions.index'] : null,
+                    $scope->isRep() ? ['قواعد المبيعات', 'employee.sales.policy.index'] : null,
                     $scope->isManager() ? ['عمولات الفريق', 'employee.sales-manager.commissions.index'] : null,
                     ['تقرير ماسنجر وواتساب', $c.'reports.social'],
                     $scope->isAdmin() ? ['تقارير المبيعات', 'admin.sales.reports.index'] : null,
@@ -146,7 +147,6 @@ final class CrmNavigation
                     $scope->isAdmin() ? ['مركز ليدات Meta', 'admin.meta-social.leads.index'] : null,
                     $scope->isAdmin() ? ['ربط موظفي Meta', 'admin.meta-social.agents.index'] : null,
                     $scope->isAdmin() ? ['إعدادات واتساب', 'admin.whatsapp.settings'] : null,
-                    ['تقرير ماسنجر وواتساب', $c.'reports.social'],
                 ])),
             ],
             [
@@ -245,18 +245,19 @@ final class CrmNavigation
     {
         $c = $scope->routePrefix;
         $candidates = [
-            ['عميل محتمل', $c.'leads.create'],
-            ['حساب', $c.'accounts.create'],
-            ['جهة اتصال', $c.'contacts.create'],
-            ['نشاط', $c.'activities.create'],
-            ['حملة', $c.'campaigns.create'],
-            ['تذكرة', $c.'cases.create'],
-            ['مستند', $c.'documents.create'],
+            ['عميل محتمل', $c.'leads.create', 'leads'],
+            ['حساب', $c.'accounts.create', 'accounts'],
+            ['جهة اتصال', $c.'contacts.create', 'contacts'],
+            ['نشاط', $c.'activities.create', 'activities'],
+            ['حملة', $c.'campaigns.create', 'campaigns'],
+            ['تذكرة', $c.'cases.create', 'cases'],
+            ['مستند', $c.'documents.create', 'documents'],
         ];
 
+        $access = app(\App\Domains\Sales\Services\CrmAccessService::class);
         $out = [];
-        foreach ($candidates as [$label, $routeName]) {
-            if (Route::has($routeName)) {
+        foreach ($candidates as [$label, $routeName, $module]) {
+            if (Route::has($routeName) && $access->allowsTab($scope->user, $module, $scope)) {
                 $out[] = ['label' => $label, 'url' => route($routeName)];
             }
         }

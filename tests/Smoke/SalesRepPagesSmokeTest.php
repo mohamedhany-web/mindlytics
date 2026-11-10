@@ -34,8 +34,8 @@ class SalesRepPagesSmokeTest extends SmokeTestCase
             if (! in_array('GET', $route->methods(), true) || ! preg_match('#^employee/(sales|crm)(/|$)#', $route->uri())) {
                 continue;
             }
-            // صفحات المدير والأدمن (الاعتمادات، الصلاحيات، الإدارة) بترفض الموظف عن قصد ومش ظاهرة في قايمته
-            if (preg_match('#^employee/crm/(win-approvals|admin|access)(/|$)#', $route->uri()) || $route->uri() === 'employee/crm/quotes/{order}') {
+            // صفحات المدير والأدمن (الاعتمادات، الصلاحيات، الإدارة، الحملات) بترفض الموظف عن قصد ومش ظاهرة في قايمته
+            if (preg_match('#^employee/crm/(win-approvals|admin|access|campaigns)(/|$)#', $route->uri()) || $route->uri() === 'employee/crm/quotes/{order}') {
                 continue;
             }
             if (str_contains($route->uri(), '/poll') || str_contains($route->uri(), '/media') || str_ends_with($route->uri(), '/status') || str_contains($route->uri(), 'print-pdf')) {

@@ -60,13 +60,15 @@ final class CrmAccessService
 
     public function allowsRouteHint(User $user, string $routeName, ?CrmScope $scope = null): bool
     {
+        // أطول مفتاح بيطابق هو اللي بيحكم (meta-social.agents قبل meta-social، daily-reports قبل reports)
+        $match = null;
         foreach (CrmFeatureCatalog::routeFeatureHints() as $needle => $featureKey) {
-            if (str_contains($routeName, $needle)) {
-                return $this->allows($user, $featureKey, $scope);
+            if (str_contains($routeName, $needle) && ($match === null || strlen($needle) > strlen($match[0]))) {
+                $match = [$needle, $featureKey];
             }
         }
 
-        return true;
+        return $match === null || $this->allows($user, $match[1], $scope);
     }
 
     /**

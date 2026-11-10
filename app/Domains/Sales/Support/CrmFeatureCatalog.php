@@ -21,7 +21,8 @@ final class CrmFeatureCatalog
             ['key' => 'module.opportunities', 'label' => 'الفرص', 'group' => 'modules', 'roles' => ['rep', 'manager', 'admin']],
             ['key' => 'module.activities', 'label' => 'الأنشطة', 'group' => 'modules', 'roles' => ['rep', 'manager', 'admin']],
             ['key' => 'module.calendar', 'label' => 'التقويم', 'group' => 'modules', 'roles' => ['rep', 'manager', 'admin']],
-            ['key' => 'module.campaigns', 'label' => 'الحملات', 'group' => 'modules', 'roles' => ['rep', 'manager', 'admin']],
+            // الحملات الإعلانية شغل المدير والتسويق، مش الموظف
+            ['key' => 'module.campaigns', 'label' => 'الحملات', 'group' => 'modules', 'roles' => ['manager', 'admin']],
             ['key' => 'module.cases', 'label' => 'التذاكر', 'group' => 'modules', 'roles' => ['rep', 'manager', 'admin']],
             ['key' => 'module.documents', 'label' => 'المستندات', 'group' => 'modules', 'roles' => ['rep', 'manager', 'admin']],
             ['key' => 'module.quotes', 'label' => 'عروض الأسعار', 'group' => 'modules', 'roles' => ['rep', 'manager', 'admin']],
@@ -129,7 +130,8 @@ final class CrmFeatureCatalog
             'policy' => 'ops.policy',
             'kpi' => 'ops.kpi',
             'scorecard' => 'ops.scorecard',
-            'reports.index' => 'ops.reports_admin',
+            // بالاسم الكامل: «reports.index» لوحده كان بيمسك daily-reports.index ويخفي التقرير اليومي
+            'sales.reports.index' => 'ops.reports_admin',
             'daily-reports' => 'ops.daily_reports',
             'commissions' => 'ops.commissions',
             'groups' => 'ops.groups',

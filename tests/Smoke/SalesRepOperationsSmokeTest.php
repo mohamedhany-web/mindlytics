@@ -59,14 +59,15 @@ class SalesRepOperationsSmokeTest extends SmokeTestCase
         $this->step('account store', $this->post(route('employee.crm.accounts.store'), ['name' => 'Smoke Account', 'phone' => '0100', 'account_type' => 'customer', 'assigned_to' => $rep->id]));
         $account = \App\Domains\Sales\Models\CrmAccount::where('name', 'Smoke Account')->first();
         $this->step('contact store', $this->post(route('employee.crm.contacts.store'), ['first_name' => 'Smoke', 'last_name' => 'Contact', 'crm_account_id' => $account?->id, 'phone' => '0101', 'assigned_to' => $rep->id]));
-        $this->step('campaign store', $this->post(route('employee.crm.campaigns.store'), ['name' => 'Smoke Campaign', 'status' => 'planning', 'campaign_type' => 'whatsapp', 'assigned_to' => $rep->id]));
+        // الحملات مش من صلاحيات الموظف
+        $this->post(route('employee.crm.campaigns.store'), ['name' => 'Smoke Campaign', 'status' => 'planning', 'campaign_type' => 'whatsapp', 'assigned_to' => $rep->id])->assertForbidden();
         $this->step('case store', $this->post(route('employee.crm.cases.store'), ['subject' => 'Smoke Case', 'status' => 'new', 'priority' => 'medium', 'sales_lead_id' => $lead->id, 'assigned_to' => $rep->id]));
         $this->step('document store', $this->post(route('employee.crm.documents.store'), ['title' => 'Smoke Doc', 'sales_lead_id' => $lead->id, 'assigned_to' => $rep->id, 'file' => UploadedFile::fake()->create('smoke.pdf', 20, 'application/pdf')]));
         $this->step('crm activity store', $this->post(route('employee.crm.activities.store'), ['type' => 'meeting', 'status' => 'planned', 'title' => 'Smoke meeting', 'sales_lead_id' => $lead->id, 'scheduled_at' => now()->addDay()->format('Y-m-d\TH:i')]));
 
         foreach ([
             'accounts' => \App\Domains\Sales\Models\CrmAccount::class, 'contacts' => \App\Domains\Sales\Models\CrmContact::class,
-            'campaigns' => \App\Domains\Sales\Models\CrmCampaign::class, 'cases' => \App\Domains\Sales\Models\CrmCase::class,
+            'cases' => \App\Domains\Sales\Models\CrmCase::class,
             'documents' => \App\Domains\Sales\Models\CrmDocument::class,
         ] as $module => $class) {
             $row = $class::query()->where('assigned_to', $rep->id)->latest('id')->first();

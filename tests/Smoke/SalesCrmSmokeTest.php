@@ -174,6 +174,12 @@ class SalesCrmSmokeTest extends SmokeTestCase
         ] as $ctx) {
             $this->actingAs($ctx['user']);
             foreach ($modules as $module) {
+                // الحملات للمدير والأدمن بس (CrmFeatureCatalog)
+                if ($module === 'campaigns' && ! $ctx['admin']) {
+                    $this->get($ctx['prefix'].'/'.$module)->assertForbidden();
+
+                    continue;
+                }
                 $this->page($ctx['prefix'].'/'.$module);
             }
             $this->page($ctx['prefix'].'/reports/kpi');

@@ -308,6 +308,7 @@ class CrmModuleController extends Controller
     public function campaignsStore(Request $request): RedirectResponse
     {
         $scope = $this->scope($request);
+        $this->ensureModule($scope, 'campaigns');
         $data = $this->validateCampaign($request, $scope);
         $data['created_by'] = $scope->user->id;
         $campaign = CrmCampaign::create($data);
@@ -341,6 +342,7 @@ class CrmModuleController extends Controller
     public function campaignsUpdate(Request $request, CrmCampaign $campaign): RedirectResponse
     {
         $scope = $this->scope($request);
+        $this->ensureModule($scope, 'campaigns');
         abort_unless($scope->canSeeAssigned($campaign->assigned_to), 404);
         $campaign->update($this->validateCampaign($request, $scope));
 
