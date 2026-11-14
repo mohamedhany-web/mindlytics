@@ -144,15 +144,15 @@ class SalesCourseBoardEntry extends Model
             : null;
     }
 
-    /** صفحة التفاصيل للجمهور: صفحة الكورس المربوط، وإلا صفحة التوصيف لو منشورة. */
+    /** صفحة التفاصيل: صفحة التوصيف لو منشورة، وإلا صفحة الكورس المربوط. */
     public function detailsUrl(): ?string
     {
-        $course = $this->advancedCourse;
-        if ($course && $course->is_active) {
-            return route('public.course.show', $course->id);
+        if ($url = $this->landingUrl()) {
+            return $url;
         }
+        $course = $this->advancedCourse;
 
-        return $this->landingUrl();
+        return $course && $course->is_active ? route('public.course.show', $course->id) : null;
     }
 
     public function landingUrl(): ?string
