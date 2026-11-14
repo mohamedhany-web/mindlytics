@@ -147,16 +147,9 @@ class SalesCourseBoardEntry extends Model
     /** صفحة التفاصيل للجمهور: صفحة الكورس المربوط، وإلا صفحة التوصيف لو منشورة. */
     public function detailsUrl(): ?string
     {
-        $course = $this->relationLoaded('advancedCourse')
-            ? $this->advancedCourse
-            : $this->advancedCourse()->first();
-
+        $course = $this->advancedCourse;
         if ($course && $course->is_active) {
             return route('public.course.show', $course->id);
-        }
-
-        if ($this->advanced_course_id) {
-            return route('public.course.show', $this->advanced_course_id);
         }
 
         return $this->landingUrl();
