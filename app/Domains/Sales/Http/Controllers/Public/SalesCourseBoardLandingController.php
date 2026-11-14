@@ -10,8 +10,7 @@ use Illuminate\View\View;
 class SalesCourseBoardLandingController extends Controller
 {
     /**
-     * روابط قديمة على /course-info/{slug} تتحوّل لصفحة الكورس المربوطة
-     * عشان زر «التفاصيل» يفتح عرض الكورس مش لاندنج السيلز.
+     * /course-info/{slug} يتحوّل لصفحة الكورس (ربط يدوي أو مطابقة بالاسم).
      */
     public function show(string $slug): View|RedirectResponse
     {
@@ -22,8 +21,8 @@ class SalesCourseBoardLandingController extends Controller
             ->with('advancedCourse')
             ->firstOrFail();
 
-        $course = $entry->advancedCourse;
-        if ($course && $course->is_active) {
+        $course = $entry->resolvedPublicCourse();
+        if ($course) {
             return redirect()->route('public.course.show', $course->id);
         }
 

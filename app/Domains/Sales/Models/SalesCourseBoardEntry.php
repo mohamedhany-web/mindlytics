@@ -144,18 +144,60 @@ class SalesCourseBoardEntry extends Model
             : null;
     }
 
-    /** صفحة التفاصيل للجمهور: صفحة الكورس المربوط، وإلا صفحة التوصيف لو منشورة. */
-    public function detailsUrl(): ?string
+    /**
+     * كورس الـ LMS المعروض للجمهور: الربط اليدوي أولاً، وإلا مطابقة بالاسم/الـ slug.
+     * عشان زر «التفاصيل» مايفضلش على course-info لو الربط فاضي في الأدمن.
+     */
+    public function resolvedPublicCourse(): ?AdvancedCourse
     {
-        $courseId = $this->advanced_course_id;
-        if ($courseId) {
-            $course = $this->relationLoaded('advancedCourse')
+        if ($this->advanced_course_id) {
+            $linked = $this->relationLoaded('advancedCourse')
                 ? $this->advancedCourse
                 : $this->advancedCourse()->first();
-
-            if ($course && $course->is_active) {
-                return route('public.course.show', $course->id);
+            if ($linked && $linked->is_active) {
+                return $linked;
             }
+        }
+
+        $needle = Str::lower(trim((string) $this->name));
+        $slug = Str::slug((string) ($this->slug ?: $this->name));
+        if ($needle === '') {
+            return null;
+        }
+
+        $candidates = AdvancedCourse::query()
+            ->where('is_active', true)
+            ->publicCatalog()
+            ->get(['id', 'title']);
+
+        $best = null;
+        $bestScore = 0;
+        foreach ($candidates as $course) {
+            $title = Str::lower(trim((string) $course->title));
+            $titleSlug = Str::slug((string) $course->title);
+            $titleBare = trim(preg_replace('/\b(course|كورس)\b/u', '', $title) ?? $title);
+            $score = match (true) {
+                $title === $needle, $titleBare === $needle => 100,
+                str_contains($title, $needle), str_contains($titleBare, $needle) => 80,
+                str_contains($needle, $titleBare) && mb_strlen($titleBare) >= 3 => 70,
+                $slug !== '' && ($titleSlug === $slug || str_contains($titleSlug, $slug) || str_contains($slug, $titleSlug)) => 65,
+                default => 0,
+            };
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $best = $course;
+            }
+        }
+
+        return $bestScore >= 65 ? $best : null;
+    }
+
+    /** صفحة التفاصيل للجمهور: صفحة الكورس، وإلا صفحة التوصيف لو منشورة. */
+    public function detailsUrl(): ?string
+    {
+        $course = $this->resolvedPublicCourse();
+        if ($course) {
+            return route('public.course.show', $course->id);
         }
 
         return $this->landingUrl();
