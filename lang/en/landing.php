@@ -583,6 +583,7 @@ return [
                 'egp' => 'EGP',
                 'price_pending' => 'Pricing is being updated — contact sales for details.',
                 'contact_sales' => 'Contact sales team',
+                'whatsapp' => 'WhatsApp sales',
                 'platform_page' => 'Course page on the platform',
                 'copy_link' => 'Copy page link',
                 'link_copied' => 'Link copied',
