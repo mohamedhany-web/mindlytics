@@ -103,6 +103,10 @@ class AdvancedCourse extends Model
         'level',
         'duration_hours',
         'duration_minutes',
+        'public_lectures_count',
+        'preview_lecture_ids',
+        'preview_lesson_ids',
+        'preview_unlocked_count',
         'price',
         'discount_amount',
         'thumbnail',
@@ -146,6 +150,8 @@ class AdvancedCourse extends Model
         'skills' => 'array',
         'mind_map_steps' => 'array',
         'mind_map_published' => 'boolean',
+        'preview_lecture_ids' => 'array',
+        'preview_lesson_ids' => 'array',
     ];
 
     public function branch()
@@ -335,6 +341,19 @@ class AdvancedCourse extends Model
         }
 
         return (int) $this->lectures()->count();
+    }
+
+    /**
+     * عدد المحاضرات المعروض على الصفحة العامة (تجاوز يدوي إن وُجد).
+     */
+    public function getDisplayLecturesCountAttribute(): int
+    {
+        $override = $this->attributes['public_lectures_count'] ?? null;
+        if ($override !== null && $override !== '') {
+            return max(0, (int) $override);
+        }
+
+        return $this->total_lectures;
     }
 
     /**

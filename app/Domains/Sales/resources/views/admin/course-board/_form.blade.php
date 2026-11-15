@@ -2,6 +2,9 @@
     $highlightsText = old('highlights_text', isset($entry) && is_array($entry->highlights) ? implode("\n", $entry->highlights) : '');
     $linked = $linkedCourse ?? ($entry->relationLoaded('advancedCourse') ? $entry->advancedCourse : $entry->advancedCourse);
     $lms = fn (string $field, $default = '') => old('lms.'.$field, $linked?->{$field} ?? $default);
+    $previewCandidates = $previewCandidates ?? ['lectures' => collect(), 'lessons' => collect()];
+    $selectedPreviewLectureIds = collect(old('lms.preview_lecture_ids', $linked?->preview_lecture_ids ?? []))->map(fn ($id) => (int) $id)->all();
+    $selectedPreviewLessonIds = collect(old('lms.preview_lesson_ids', $linked?->preview_lesson_ids ?? []))->map(fn ($id) => (int) $id)->all();
 @endphp
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -178,9 +181,27 @@
             </select>
         </div>
         <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1">ساعات المدة (رقم)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">ساعات المدة</label>
             <input type="number" min="0" step="1" name="lms[duration_hours]" value="{{ $lms('duration_hours') }}"
                    class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white" @disabled(! $linked)>
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">دقائق المدة</label>
+            <input type="number" min="0" max="59" step="1" name="lms[duration_minutes]" value="{{ $lms('duration_minutes', 0) }}"
+                   class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white" @disabled(! $linked)>
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">عدد المحاضرات المعروض</label>
+            <input type="number" min="0" step="1" name="lms[public_lectures_count]" value="{{ $lms('public_lectures_count') }}"
+                   class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white" @disabled(! $linked)
+                   placeholder="اتركه فارغاً للعد التلقائي">
+            <p class="text-[11px] text-slate-500 mt-1">يظهر في صفحة الكورس العامة بدل العدد التلقائي.</p>
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">عدد فيديوهات المعاينة المفتوحة للتشغيل</label>
+            <input type="number" min="0" max="10" step="1" name="lms[preview_unlocked_count]" value="{{ $lms('preview_unlocked_count', 2) }}"
+                   class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white" @disabled(! $linked)>
+            <p class="text-[11px] text-slate-500 mt-1">من الفيديوهات المختارة أدناه — الباقي يظهر مقفولاً.</p>
         </div>
         <div>
             <label class="block text-xs font-semibold text-slate-500 mb-1">سعر صفحة الكورس / الدفع (ج.م)</label>
@@ -203,6 +224,70 @@
                 <input type="checkbox" name="lms[is_free]" value="1" @checked(old('lms.is_free', $linked?->is_free ?? false)) class="rounded border-slate-300 text-emerald-600" @disabled(! $linked)>
                 كورس مجاني
             </label>
+        </div>
+
+        <div class="md:col-span-2 pt-2 border-t border-slate-100">
+            <h3 class="text-sm font-bold text-slate-800 mb-1">فيديوهات المعاينة على صفحة الكورس</h3>
+            <p class="text-xs text-slate-500 mb-3">اختَر الفيديوهات التي تظهر في قسم المعاينة. لو ما اخترتش حاجة هتتعرض أول فيديوهات تلقائياً.</p>
+
+            @if(! $linked)
+                <p class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">اربط كورس LMS أولاً عشان تقدر تختار فيديوهات المعاينة.</p>
+            @else
+                @php
+                    $lectureCandidates = $previewCandidates['lectures'] ?? collect();
+                    $lessonCandidates = $previewCandidates['lessons'] ?? collect();
+                @endphp
+
+                @if($lectureCandidates->isNotEmpty())
+                    <div class="mb-4">
+                        <div class="text-xs font-semibold text-slate-600 mb-2">محاضرات لها تسجيل</div>
+                        <div class="max-h-56 overflow-y-auto space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            @foreach($lectureCandidates as $lecture)
+                                <label class="flex items-start gap-2 text-sm text-slate-700">
+                                    <input type="checkbox"
+                                           name="lms[preview_lecture_ids][]"
+                                           value="{{ $lecture->id }}"
+                                           class="mt-0.5 rounded border-slate-300 text-emerald-600"
+                                           @checked(in_array((int) $lecture->id, $selectedPreviewLectureIds, true))>
+                                    <span>
+                                        <span class="font-semibold">{{ $lecture->title }}</span>
+                                        @if($lecture->duration_minutes)
+                                            <span class="text-xs text-slate-500">— {{ $lecture->duration_minutes }} د</span>
+                                        @endif
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                @if($lessonCandidates->isNotEmpty())
+                    <div class="mb-2">
+                        <div class="text-xs font-semibold text-slate-600 mb-2">دروس فيديو</div>
+                        <div class="max-h-56 overflow-y-auto space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            @foreach($lessonCandidates as $lesson)
+                                <label class="flex items-start gap-2 text-sm text-slate-700">
+                                    <input type="checkbox"
+                                           name="lms[preview_lesson_ids][]"
+                                           value="{{ $lesson->id }}"
+                                           class="mt-0.5 rounded border-slate-300 text-emerald-600"
+                                           @checked(in_array((int) $lesson->id, $selectedPreviewLessonIds, true))>
+                                    <span>
+                                        <span class="font-semibold">{{ $lesson->title }}</span>
+                                        @if($lesson->duration_minutes)
+                                            <span class="text-xs text-slate-500">— {{ $lesson->duration_minutes }} د</span>
+                                        @endif
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                @if($lectureCandidates->isEmpty() && $lessonCandidates->isEmpty())
+                    <p class="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">مفيش فيديوهات جاهزة للمعاينة في هذا الكورس حالياً.</p>
+                @endif
+            @endif
         </div>
     </div>
 </div>

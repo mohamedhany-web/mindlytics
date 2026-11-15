@@ -138,14 +138,118 @@ class ProtectedVideoController extends Controller
     }
 
     /**
+     * عناصر المعاينة العامة (محاضرات و/أو دروس) حسب اختيار الأدمن أو الترتيب التلقائي.
+     *
+     * @return \Illuminate\Support\Collection<int, Lecture|CourseLesson>
+     */
+    public static function previewItemsForCourse(int $courseId, ?int $limit = null)
+    {
+        $course = AdvancedCourse::query()->find($courseId);
+        $customLectureIds = self::normalizedIdList($course?->preview_lecture_ids);
+        $customLessonIds = self::normalizedIdList($course?->preview_lesson_ids);
+        $hasCustom = $customLectureIds !== [] || $customLessonIds !== [];
+        $max = $limit ?? ($hasCustom ? 10 : self::PREVIEW_LIST_COUNT);
+
+        $items = collect();
+
+        if ($hasCustom) {
+            if ($customLectureIds !== []) {
+                $lectures = Lecture::query()
+                    ->where('course_id', $courseId)
+                    ->whereIn('id', $customLectureIds)
+                    ->whereNotNull('recording_url')
+                    ->where('recording_url', '!=', '')
+                    ->get(['id', 'title', 'duration_minutes', 'recording_url', 'video_platform', 'scheduled_at'])
+                    ->keyBy('id');
+
+                foreach ($customLectureIds as $id) {
+                    if ($row = $lectures->get($id)) {
+                        $row->setAttribute('preview_kind', 'lecture');
+                        $items->push($row);
+                    }
+                }
+            }
+
+            if ($customLessonIds !== []) {
+                $lessons = CourseLesson::query()
+                    ->where('advanced_course_id', $courseId)
+                    ->whereIn('id', $customLessonIds)
+                    ->where('is_active', true)
+                    ->where('type', 'video')
+                    ->whereNotNull('video_url')
+                    ->where('video_url', '!=', '')
+                    ->get(['id', 'title', 'duration_minutes', 'video_url', 'order'])
+                    ->keyBy('id');
+
+                foreach ($customLessonIds as $id) {
+                    if ($row = $lessons->get($id)) {
+                        $row->setAttribute('preview_kind', 'lesson');
+                        $items->push($row);
+                    }
+                }
+            }
+
+            return $items->take($max)->values();
+        }
+
+        $lectures = self::autoPreviewLectures($courseId, $max);
+        if ($lectures->isNotEmpty()) {
+            return $lectures->each(fn (Lecture $lecture) => $lecture->setAttribute('preview_kind', 'lecture'))->values();
+        }
+
+        return self::autoPreviewLessons($courseId, $max)
+            ->each(fn (CourseLesson $lesson) => $lesson->setAttribute('preview_kind', 'lesson'))
+            ->values();
+    }
+
+    /**
      * أول محاضرات الكورس التي لديها تسجيل — للمعاينة العامة.
      *
      * @return \Illuminate\Support\Collection<int, Lecture>
      */
     public static function previewLecturesForCourse(int $courseId, ?int $limit = null)
     {
-        $limit = $limit ?? self::PREVIEW_LIST_COUNT;
+        return self::previewItemsForCourse($courseId, $limit)
+            ->filter(fn ($item) => ($item->preview_kind ?? 'lecture') === 'lecture')
+            ->values();
+    }
 
+    public static function previewUnlockedCountForCourse(int $courseId): int
+    {
+        $course = AdvancedCourse::query()->find($courseId);
+        $configured = $course?->preview_unlocked_count;
+
+        if ($configured === null) {
+            return self::PREVIEW_UNLOCKED_COUNT;
+        }
+
+        return max(0, min(10, (int) $configured));
+    }
+
+    public static function flushPreviewCache(int $courseId): void
+    {
+        Cache::forget('preview_unlocked_lecture_ids_v2:'.$courseId);
+        Cache::forget('preview_unlocked_lesson_ids_v4:'.$courseId);
+        Cache::forget('preview_unlocked_lecture_ids_v1:'.$courseId);
+        Cache::forget('preview_unlocked_lesson_ids_v3:'.$courseId);
+    }
+
+    /** @return list<int> */
+    private static function normalizedIdList(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_unique(array_filter(array_map(
+            static fn ($id) => (int) $id,
+            $value
+        ), static fn (int $id) => $id > 0)));
+    }
+
+    /** @return \Illuminate\Support\Collection<int, Lecture> */
+    private static function autoPreviewLectures(int $courseId, int $limit)
+    {
         return Lecture::where('course_id', $courseId)
             ->whereNotNull('recording_url')
             ->where('recording_url', '!=', '')
@@ -154,6 +258,20 @@ class ProtectedVideoController extends Controller
             ->orderBy('id')
             ->limit($limit)
             ->get(['id', 'title', 'duration_minutes', 'recording_url', 'video_platform', 'scheduled_at']);
+    }
+
+    /** @return \Illuminate\Support\Collection<int, CourseLesson> */
+    private static function autoPreviewLessons(int $courseId, int $limit)
+    {
+        return CourseLesson::where('advanced_course_id', $courseId)
+            ->where('is_active', true)
+            ->where('type', 'video')
+            ->whereNotNull('video_url')
+            ->where('video_url', '!=', '')
+            ->orderBy('order')
+            ->orderBy('id')
+            ->limit($limit)
+            ->get(['id', 'title', 'duration_minutes', 'video_url', 'order']);
     }
 
     private function watchLecture(int $courseId, int $lectureId, bool $isPreview): RedirectResponse|StreamedResponse|JsonResponse|Response
@@ -262,11 +380,16 @@ class ProtectedVideoController extends Controller
     private function isPreviewLecture(int $courseId, int $lectureId): bool
     {
         $previewIds = Cache::remember(
-            'preview_unlocked_lecture_ids_v1:'.$courseId,
+            'preview_unlocked_lecture_ids_v2:'.$courseId,
             now()->addMinutes(30),
             function () use ($courseId) {
-                return self::previewLecturesForCourse($courseId, self::PREVIEW_UNLOCKED_COUNT)
+                $unlocked = self::previewUnlockedCountForCourse($courseId);
+
+                return self::previewItemsForCourse($courseId)
+                    ->take($unlocked)
+                    ->filter(fn ($item) => ($item->preview_kind ?? 'lecture') === 'lecture')
                     ->pluck('id')
+                    ->map(fn ($id) => (int) $id)
                     ->all();
             }
         );
@@ -276,24 +399,17 @@ class ProtectedVideoController extends Controller
 
     private function isPreviewLesson(int $courseId, int $lessonId): bool
     {
-        // إن وُجدت محاضرات للمعاينة نفضّلها ولا نفتح دروساً فارغة
-        if (self::previewLecturesForCourse($courseId, 1)->isNotEmpty()) {
-            return false;
-        }
-
         $previewIds = Cache::remember(
-            'preview_unlocked_lesson_ids_v3:'.$courseId,
+            'preview_unlocked_lesson_ids_v4:'.$courseId,
             now()->addMinutes(30),
             function () use ($courseId) {
-                return CourseLesson::where('advanced_course_id', $courseId)
-                    ->where('is_active', true)
-                    ->where('type', 'video')
-                    ->whereNotNull('video_url')
-                    ->where('video_url', '!=', '')
-                    ->orderBy('order')
-                    ->orderBy('id')
-                    ->limit(self::PREVIEW_UNLOCKED_COUNT)
+                $unlocked = self::previewUnlockedCountForCourse($courseId);
+
+                return self::previewItemsForCourse($courseId)
+                    ->take($unlocked)
+                    ->filter(fn ($item) => ($item->preview_kind ?? '') === 'lesson')
                     ->pluck('id')
+                    ->map(fn ($id) => (int) $id)
                     ->all();
             }
         );

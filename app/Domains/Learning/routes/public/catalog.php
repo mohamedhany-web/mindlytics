@@ -40,22 +40,9 @@ Route::get('/course/{id}', function ($id) {
         ->orderBy('order')
         ->get(['id', 'title', 'order']);
 
-    // أول 3 محاضرات لها تسجيل: أول 2 مفتوحان عبر بلاير موقّع، الثالث مقفول
-    $previewUnlockedCount = \App\Domains\Learning\Http\Controllers\ProtectedVideoController::PREVIEW_UNLOCKED_COUNT;
-    $previewVideoLessons = \App\Domains\Learning\Http\Controllers\ProtectedVideoController::previewLecturesForCourse((int) $course->id);
-
-    // إن لم توجد محاضرات مسجّلة، نستخدم دروس video_url إن وُجدت
-    if ($previewVideoLessons->isEmpty()) {
-        $previewVideoLessons = \App\Domains\Learning\Models\CourseLesson::where('advanced_course_id', $course->id)
-            ->where('is_active', true)
-            ->where('type', 'video')
-            ->whereNotNull('video_url')
-            ->where('video_url', '!=', '')
-            ->orderBy('order')
-            ->orderBy('id')
-            ->limit(\App\Domains\Learning\Http\Controllers\ProtectedVideoController::PREVIEW_LIST_COUNT)
-            ->get(['id', 'title', 'duration_minutes', 'video_url', 'order']);
-    }
+    // فيديوهات المعاينة: اختيار الأدمن أو أول محاضرات/دروس تلقائياً
+    $previewUnlockedCount = \App\Domains\Learning\Http\Controllers\ProtectedVideoController::previewUnlockedCountForCourse((int) $course->id);
+    $previewVideoLessons = \App\Domains\Learning\Http\Controllers\ProtectedVideoController::previewItemsForCourse((int) $course->id);
 
     // التحقق من التسجيل في الكورس
     $isEnrolled = false;

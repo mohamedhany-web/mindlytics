@@ -13,7 +13,7 @@
 
         <form method="POST" action="{{ route('admin.sales-course-board.store') }}" class="space-y-4">
             @csrf
-            @include('sales::admin.course-board._form', ['entry' => $entry, 'courses' => $courses, 'linkedCourse' => $linkedCourse ?? null])
+            @include('sales::admin.course-board._form', ['entry' => $entry, 'courses' => $courses, 'linkedCourse' => $linkedCourse ?? null, 'previewCandidates' => $previewCandidates ?? ['lectures' => collect(), 'lessons' => collect()]])
             <div class="pt-4">
                 <button type="submit" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold">حفظ</button>
             </div>

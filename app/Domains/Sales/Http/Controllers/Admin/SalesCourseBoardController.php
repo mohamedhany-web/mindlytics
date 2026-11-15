@@ -3,10 +3,14 @@
 namespace App\Domains\Sales\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Domains\Learning\Http\Controllers\ProtectedVideoController;
 use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Learning\Models\CourseLesson;
+use App\Domains\Learning\Models\Lecture;
 use App\Domains\Sales\Models\SalesCourseBoardEntry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class SalesCourseBoardController extends Controller
@@ -46,6 +50,7 @@ class SalesCourseBoardController extends Controller
             'entry' => new SalesCourseBoardEntry(['is_active' => true, 'landing_published' => false]),
             'courses' => $this->courseOptions(),
             'linkedCourse' => null,
+            'previewCandidates' => $this->emptyPreviewCandidates(),
         ]);
     }
 
@@ -63,11 +68,13 @@ class SalesCourseBoardController extends Controller
     public function edit(SalesCourseBoardEntry $salesCourseBoard): View
     {
         $salesCourseBoard->load('advancedCourse');
+        $linked = $salesCourseBoard->advancedCourse;
 
         return view('sales::admin.course-board.edit', [
             'entry' => $salesCourseBoard,
             'courses' => $this->courseOptions(),
-            'linkedCourse' => $salesCourseBoard->advancedCourse,
+            'linkedCourse' => $linked,
+            'previewCandidates' => $this->previewCandidatesFor($linked),
         ]);
     }
 
@@ -128,6 +135,13 @@ class SalesCourseBoardController extends Controller
             'lms.follow_up_info' => ['nullable', 'string'],
             'lms.level' => ['nullable', 'in:beginner,intermediate,advanced'],
             'lms.duration_hours' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'lms.duration_minutes' => ['nullable', 'integer', 'min:0', 'max:59'],
+            'lms.public_lectures_count' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'lms.preview_unlocked_count' => ['nullable', 'integer', 'min:0', 'max:10'],
+            'lms.preview_lecture_ids' => ['nullable', 'array'],
+            'lms.preview_lecture_ids.*' => ['integer'],
+            'lms.preview_lesson_ids' => ['nullable', 'array'],
+            'lms.preview_lesson_ids.*' => ['integer'],
             'lms.price' => ['nullable', 'numeric', 'min:0'],
             'lms.discount_amount' => ['nullable', 'numeric', 'min:0'],
             'lms.video_url' => ['nullable', 'url', 'max:1000'],
@@ -146,6 +160,23 @@ class SalesCourseBoardController extends Controller
 
         $lms = $validated['lms'] ?? [];
         $lms['is_free'] = $request->boolean('lms.is_free');
+        $lms['preview_lecture_ids'] = array_values(array_unique(array_map(
+            'intval',
+            $request->input('lms.preview_lecture_ids', [])
+        )));
+        $lms['preview_lesson_ids'] = array_values(array_unique(array_map(
+            'intval',
+            $request->input('lms.preview_lesson_ids', [])
+        )));
+        $lms['public_lectures_count'] = $request->filled('lms.public_lectures_count')
+            ? (int) $request->input('lms.public_lectures_count')
+            : null;
+        $lms['duration_minutes'] = $request->filled('lms.duration_minutes')
+            ? (int) $request->input('lms.duration_minutes')
+            : 0;
+        $lms['preview_unlocked_count'] = $request->filled('lms.preview_unlocked_count')
+            ? (int) $request->input('lms.preview_unlocked_count')
+            : null;
         unset($validated['highlights_text'], $validated['lms']);
 
         return [$validated, $lms];
@@ -163,6 +194,32 @@ class SalesCourseBoardController extends Controller
             return;
         }
 
+        $allowedLectureIds = Lecture::query()
+            ->where('course_id', $course->id)
+            ->whereNotNull('recording_url')
+            ->where('recording_url', '!=', '')
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+        $allowedLessonIds = CourseLesson::query()
+            ->where('advanced_course_id', $course->id)
+            ->where('is_active', true)
+            ->where('type', 'video')
+            ->whereNotNull('video_url')
+            ->where('video_url', '!=', '')
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $previewLectureIds = array_values(array_intersect(
+            array_map('intval', $lms['preview_lecture_ids'] ?? []),
+            $allowedLectureIds
+        ));
+        $previewLessonIds = array_values(array_intersect(
+            array_map('intval', $lms['preview_lesson_ids'] ?? []),
+            $allowedLessonIds
+        ));
+
         $payload = [
             'title' => $lms['title'] ?? $course->title,
             'hook' => $lms['hook'] ?? null,
@@ -176,6 +233,15 @@ class SalesCourseBoardController extends Controller
             'follow_up_info' => $lms['follow_up_info'] ?? null,
             'level' => $lms['level'] ?? $course->level,
             'duration_hours' => $lms['duration_hours'] ?? $course->duration_hours,
+            'duration_minutes' => $lms['duration_minutes'] ?? $course->duration_minutes,
+            'public_lectures_count' => array_key_exists('public_lectures_count', $lms)
+                ? $lms['public_lectures_count']
+                : $course->public_lectures_count,
+            'preview_unlocked_count' => array_key_exists('preview_unlocked_count', $lms)
+                ? $lms['preview_unlocked_count']
+                : $course->preview_unlocked_count,
+            'preview_lecture_ids' => $previewLectureIds,
+            'preview_lesson_ids' => $previewLessonIds,
             'price' => $lms['price'] ?? $course->price,
             'discount_amount' => $lms['discount_amount'] ?? $course->discount_amount,
             'video_url' => $lms['video_url'] ?? $course->video_url,
@@ -183,6 +249,44 @@ class SalesCourseBoardController extends Controller
         ];
 
         $course->fill($payload)->save();
+        ProtectedVideoController::flushPreviewCache((int) $course->id);
+    }
+
+    /** @return array{lectures: Collection<int, Lecture>, lessons: Collection<int, CourseLesson>} */
+    private function emptyPreviewCandidates(): array
+    {
+        return [
+            'lectures' => collect(),
+            'lessons' => collect(),
+        ];
+    }
+
+    /** @return array{lectures: Collection<int, Lecture>, lessons: Collection<int, CourseLesson>} */
+    private function previewCandidatesFor(?AdvancedCourse $course): array
+    {
+        if (! $course) {
+            return $this->emptyPreviewCandidates();
+        }
+
+        return [
+            'lectures' => Lecture::query()
+                ->where('course_id', $course->id)
+                ->whereNotNull('recording_url')
+                ->where('recording_url', '!=', '')
+                ->orderByRaw('CASE WHEN scheduled_at IS NULL THEN 1 ELSE 0 END')
+                ->orderBy('scheduled_at')
+                ->orderBy('id')
+                ->get(['id', 'title', 'duration_minutes', 'scheduled_at']),
+            'lessons' => CourseLesson::query()
+                ->where('advanced_course_id', $course->id)
+                ->where('is_active', true)
+                ->where('type', 'video')
+                ->whereNotNull('video_url')
+                ->where('video_url', '!=', '')
+                ->orderBy('order')
+                ->orderBy('id')
+                ->get(['id', 'title', 'duration_minutes', 'order']),
+        ];
     }
 
     /** @return list<string> */
