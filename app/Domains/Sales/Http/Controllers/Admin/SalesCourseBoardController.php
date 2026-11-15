@@ -45,13 +45,15 @@ class SalesCourseBoardController extends Controller
         return view('sales::admin.course-board.create', [
             'entry' => new SalesCourseBoardEntry(['is_active' => true, 'landing_published' => false]),
             'courses' => $this->courseOptions(),
+            'linkedCourse' => null,
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $this->validated($request);
+        [$validated, $lms] = $this->validated($request);
         $entry = SalesCourseBoardEntry::query()->create($validated);
+        $this->syncLinkedCourse($entry, $lms);
 
         return redirect()
             ->route('admin.sales-course-board.edit', $entry)
@@ -60,20 +62,24 @@ class SalesCourseBoardController extends Controller
 
     public function edit(SalesCourseBoardEntry $salesCourseBoard): View
     {
+        $salesCourseBoard->load('advancedCourse');
+
         return view('sales::admin.course-board.edit', [
             'entry' => $salesCourseBoard,
             'courses' => $this->courseOptions(),
+            'linkedCourse' => $salesCourseBoard->advancedCourse,
         ]);
     }
 
     public function update(Request $request, SalesCourseBoardEntry $salesCourseBoard): RedirectResponse
     {
-        $validated = $this->validated($request, $salesCourseBoard);
+        [$validated, $lms] = $this->validated($request, $salesCourseBoard);
         $salesCourseBoard->update($validated);
+        $this->syncLinkedCourse($salesCourseBoard->fresh(), $lms);
 
         return redirect()
             ->route('admin.sales-course-board.edit', $salesCourseBoard)
-            ->with('success', 'تم تحديث بيانات الكورس.');
+            ->with('success', 'تم تحديث بيانات الكورس وصفحة العرض.');
     }
 
     public function destroy(SalesCourseBoardEntry $salesCourseBoard): RedirectResponse
@@ -85,7 +91,9 @@ class SalesCourseBoardController extends Controller
             ->with('success', 'تم حذف الكورس من اللوحة.');
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * @return array{0: array<string, mixed>, 1: array<string, mixed>}
+     */
     private function validated(Request $request, ?SalesCourseBoardEntry $entry = null): array
     {
         $validated = $request->validate([
@@ -108,6 +116,22 @@ class SalesCourseBoardController extends Controller
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'is_active' => ['sometimes', 'boolean'],
             'landing_published' => ['sometimes', 'boolean'],
+            'lms.title' => ['nullable', 'string', 'max:255'],
+            'lms.hook' => ['nullable', 'string', 'max:500'],
+            'lms.description' => ['nullable', 'string'],
+            'lms.objectives' => ['nullable', 'string'],
+            'lms.what_you_learn' => ['nullable', 'string'],
+            'lms.suitable_for' => ['nullable', 'string'],
+            'lms.age_suitability' => ['nullable', 'string'],
+            'lms.instructor_info' => ['nullable', 'string'],
+            'lms.available_until_info' => ['nullable', 'string'],
+            'lms.follow_up_info' => ['nullable', 'string'],
+            'lms.level' => ['nullable', 'in:beginner,intermediate,advanced'],
+            'lms.duration_hours' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'lms.price' => ['nullable', 'numeric', 'min:0'],
+            'lms.discount_amount' => ['nullable', 'numeric', 'min:0'],
+            'lms.video_url' => ['nullable', 'url', 'max:1000'],
+            'lms.is_free' => ['sometimes', 'boolean'],
         ]);
 
         $validated['starts_at'] = $validated['starts_at'] ?? null;
@@ -120,9 +144,45 @@ class SalesCourseBoardController extends Controller
             $validated['slug'] = SalesCourseBoardEntry::generateUniqueSlug($validated['name']);
         }
 
-        unset($validated['highlights_text']);
+        $lms = $validated['lms'] ?? [];
+        $lms['is_free'] = $request->boolean('lms.is_free');
+        unset($validated['highlights_text'], $validated['lms']);
 
-        return $validated;
+        return [$validated, $lms];
+    }
+
+    /** @param  array<string, mixed>  $lms */
+    private function syncLinkedCourse(SalesCourseBoardEntry $entry, array $lms): void
+    {
+        if (! $entry->advanced_course_id || $lms === []) {
+            return;
+        }
+
+        $course = AdvancedCourse::query()->find($entry->advanced_course_id);
+        if (! $course) {
+            return;
+        }
+
+        $payload = [
+            'title' => $lms['title'] ?? $course->title,
+            'hook' => $lms['hook'] ?? null,
+            'description' => $lms['description'] ?? null,
+            'objectives' => $lms['objectives'] ?? null,
+            'what_you_learn' => $lms['what_you_learn'] ?? null,
+            'suitable_for' => $lms['suitable_for'] ?? null,
+            'age_suitability' => $lms['age_suitability'] ?? null,
+            'instructor_info' => $lms['instructor_info'] ?? null,
+            'available_until_info' => $lms['available_until_info'] ?? null,
+            'follow_up_info' => $lms['follow_up_info'] ?? null,
+            'level' => $lms['level'] ?? $course->level,
+            'duration_hours' => $lms['duration_hours'] ?? $course->duration_hours,
+            'price' => $lms['price'] ?? $course->price,
+            'discount_amount' => $lms['discount_amount'] ?? $course->discount_amount,
+            'video_url' => $lms['video_url'] ?? $course->video_url,
+            'is_free' => (bool) ($lms['is_free'] ?? false),
+        ];
+
+        $course->fill($payload)->save();
     }
 
     /** @return list<string> */
