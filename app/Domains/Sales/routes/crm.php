@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\Sales\Http\Controllers\Crm\CrmAccessController;
+use App\Domains\Sales\Http\Controllers\Crm\CrmLeadToolsController;
 use App\Domains\Sales\Http\Controllers\Crm\CrmModuleController;
 use App\Domains\Sales\Http\Controllers\Crm\CrmSocialReportController;
 use App\Domains\Sales\Http\Controllers\Crm\SalesCrmController;
@@ -20,6 +21,12 @@ Route::get('leads/{lead}/edit', [SalesCrmController::class, 'leadEdit'])->whereN
 Route::get('leads/{lead}', [SalesCrmController::class, 'lead'])->whereNumber('lead')->name('leads.show');
 Route::get('leads/{lead}/convert', [SalesCrmController::class, 'convertForm'])->whereNumber('lead')->name('leads.convert');
 Route::post('leads/{lead}/convert', [SalesCrmController::class, 'convert'])->whereNumber('lead')->name('leads.convert.store');
+Route::get('leads/{lead}/merge', [CrmLeadToolsController::class, 'mergeForm'])->whereNumber('lead')->name('leads.merge');
+Route::post('leads/{lead}/merge', [CrmLeadToolsController::class, 'merge'])->whereNumber('lead')->name('leads.merge.store');
+
+// فلاتر محفوظة لكل مستخدم
+Route::post('saved-filters', [CrmLeadToolsController::class, 'storeFilter'])->name('saved-filters.store');
+Route::delete('saved-filters/{filter}', [CrmLeadToolsController::class, 'destroyFilter'])->whereNumber('filter')->name('saved-filters.destroy');
 
 Route::get('deals', [SalesCrmController::class, 'deals'])->name('deals.index');
 Route::get('deals/{lead}', [SalesCrmController::class, 'deal'])->whereNumber('lead')->name('deals.show');

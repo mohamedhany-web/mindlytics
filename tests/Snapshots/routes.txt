@@ -400,6 +400,10 @@ GET|HEAD employee/crm/leads/{lead}/edit [employee.crm.leads.edit] {web,auth,prev
 GET|HEAD employee/crm/leads/{lead} [employee.crm.leads.show] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/crm/leads/{lead}/convert [employee.crm.leads.convert] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 POST employee/crm/leads/{lead}/convert [employee.crm.leads.convert.store] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
+GET|HEAD employee/crm/leads/{lead}/merge [employee.crm.leads.merge] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
+POST employee/crm/leads/{lead}/merge [employee.crm.leads.merge.store] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
+POST employee/crm/saved-filters [employee.crm.saved-filters.store] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
+DELETE employee/crm/saved-filters/{filter} [employee.crm.saved-filters.destroy] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/crm/deals [employee.crm.deals.index] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/crm/deals/{lead} [employee.crm.deals.show] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/crm/opportunities [employee.crm.opportunities.index] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
@@ -748,6 +752,10 @@ GET|HEAD admin/crm/leads/{lead}/edit [admin.crm.leads.edit] {web,auth,prevent-co
 GET|HEAD admin/crm/leads/{lead} [admin.crm.leads.show] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/crm/leads/{lead}/convert [admin.crm.leads.convert] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/crm/leads/{lead}/convert [admin.crm.leads.convert.store] {web,auth,prevent-concurrent,role:admin|super_admin}
+GET|HEAD admin/crm/leads/{lead}/merge [admin.crm.leads.merge] {web,auth,prevent-concurrent,role:admin|super_admin}
+POST admin/crm/leads/{lead}/merge [admin.crm.leads.merge.store] {web,auth,prevent-concurrent,role:admin|super_admin}
+POST admin/crm/saved-filters [admin.crm.saved-filters.store] {web,auth,prevent-concurrent,role:admin|super_admin}
+DELETE admin/crm/saved-filters/{filter} [admin.crm.saved-filters.destroy] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/crm/deals [admin.crm.deals.index] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/crm/deals/{lead} [admin.crm.deals.show] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/crm/opportunities [admin.crm.opportunities.index] {web,auth,prevent-concurrent,role:admin|super_admin}

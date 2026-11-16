@@ -62,6 +62,33 @@
         @endforeach
     </nav>
 
+    @php
+        $currentParams = \App\Domains\Sales\Models\CrmSavedFilter::cleanParams('leads', request()->query());
+        $isDefaultView = $currentParams === [] || $currentParams === ['quick' => $crm->isRep() ? 'mine' : 'all'];
+    @endphp
+    <div x-data="{ saving: false }" style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px">
+        <span class="crm-muted">فلاتري:</span>
+        @forelse($savedFilters ?? [] as $sf)
+            <span class="crm-chip {{ $sf->params == $currentParams ? 'is-active' : '' }}" style="display: inline-flex; align-items: center; gap: 6px; padding-inline-end: 4px">
+                <a href="{{ route($indexRoute, $sf->params) }}" style="color: inherit; text-decoration: none"><i class="fas fa-bookmark" style="font-size: 11px; opacity: .7"></i> {{ $sf->name }}</a>
+                <form method="post" action="{{ route($crm->route('saved-filters.destroy'), $sf->id) }}" onsubmit="return confirm('مسح الفلتر «{{ $sf->name }}»؟')" style="display: inline">@csrf @method('DELETE')<button type="submit" aria-label="مسح الفلتر {{ $sf->name }}" style="border: 0; background: transparent; cursor: pointer; color: inherit; opacity: .6; padding: 0 2px">×</button></form>
+            </span>
+        @empty
+            <span class="crm-muted" style="font-size: 12px">مفيش فلاتر محفوظة. اعمل فلتر واحفظه عشان ترجعله بضغطة.</span>
+        @endforelse
+        @unless($isDefaultView)
+            <button type="button" class="crm-btn crm-btn-outline crm-btn-sm" @click="saving = ! saving" x-show="! saving">＋ احفظ الفلتر الحالي</button>
+            <form x-cloak x-show="saving" method="post" action="{{ route($crm->route('saved-filters.store')) }}" style="display: inline-flex; gap: 6px; align-items: center">
+                @csrf
+                <input type="hidden" name="module" value="leads">
+                @foreach($currentParams as $k => $v)<input type="hidden" name="params[{{ $k }}]" value="{{ $v }}">@endforeach
+                <input class="crm-input" type="text" name="name" maxlength="80" required placeholder="اسم الفلتر (مثلاً: مهتمين واتساب)" aria-label="اسم الفلتر" style="width: 230px; height: 30px">
+                <button type="submit" class="crm-btn crm-btn-primary crm-btn-sm">حفظ</button>
+                <button type="button" class="crm-btn crm-btn-muted crm-btn-sm" @click="saving = false">إلغاء</button>
+            </form>
+        @endunless
+    </div>
+
     <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
         <section class="crm-card" style="flex: 999 1 720px; min-width: 0">
             <form method="post" action="{{ route($crm->route('leads.bulk')) }}" id="crm-bulk-form">

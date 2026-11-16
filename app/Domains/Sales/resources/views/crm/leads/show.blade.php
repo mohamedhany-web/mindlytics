@@ -33,6 +33,9 @@
         @if(Route::has($crm->route('activities.create')))
             <a href="{{ route($crm->route('activities.create'), ['type' => 'call']) }}" class="crm-btn crm-btn-outline">＋ مكالمة</a>
         @endif
+        @if(Route::has($crm->route('leads.merge')) && ($crm->isAdmin() || $crm->canManage() || (int) $lead->assigned_to === (int) $crm->user->id))
+            <a href="{{ route($crm->route('leads.merge'), $lead->id) }}" class="crm-btn crm-btn-outline"><i class="fas fa-code-merge"></i> دمج مكرر</a>
+        @endif
         @php($hasLeadActions = $crm->canManage() || ($crm->isAdmin() && $lead->isPendingWinApproval() && Route::has($crm->route('win-approvals.index'))))
         @if($hasLeadActions)
         <div style="position: relative" @click.outside="actions = false">

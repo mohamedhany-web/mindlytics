@@ -128,6 +128,9 @@ class SalesCrmController extends Controller
             'quickCounts' => $this->quickCounts($scope),
             'interestTypes' => SalesInterestType::query()->orderBy('sort_order')->get(['id', 'name_ar']),
             'members' => $scope->isRep() ? collect() : $scope->members(),
+            'savedFilters' => \Illuminate\Support\Facades\Schema::hasTable('crm_saved_filters')
+                ? \App\Domains\Sales\Models\CrmSavedFilter::query()->where('user_id', $scope->user->id)->where('module', 'leads')->orderBy('name')->get()
+                : collect(),
         ]);
     }
 
