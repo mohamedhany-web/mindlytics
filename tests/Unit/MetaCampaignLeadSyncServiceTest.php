@@ -44,4 +44,23 @@ class MetaCampaignLeadSyncServiceTest extends TestCase
         $this->assertSame('Sara Ali', $parsed['name']);
         $this->assertSame('+201112223334', $parsed['phone']);
     }
+
+    public function test_extract_lead_gen_form_id_from_creative_spec(): void
+    {
+        $formId = (new MetaAdsGraphService)->extractLeadGenFormIdFromAd([
+            'id' => '111',
+            'creative' => [
+                'object_story_spec' => [
+                    'link_data' => [
+                        'call_to_action' => [
+                            'value' => ['lead_gen_form_id' => '999888'],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->assertSame('999888', $formId);
+        $this->assertNull((new MetaAdsGraphService)->extractLeadGenFormIdFromAd(['id' => '1']));
+    }
 }

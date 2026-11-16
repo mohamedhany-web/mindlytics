@@ -68,12 +68,15 @@ class MetaCampaignLeadSyncService
         $adIds = [];
         $formIds = [];
         foreach ($ads as $ad) {
+            if (! is_array($ad)) {
+                continue;
+            }
             $adId = (string) ($ad['id'] ?? '');
             if ($adId !== '') {
                 $adIds[] = $adId;
             }
-            $formId = (string) ($ad['creative']['lead_gen_form_id'] ?? '');
-            if ($formId !== '') {
+            $formId = $this->metaAds->extractLeadGenFormIdFromAd($ad);
+            if ($formId) {
                 $formIds[$formId] = true;
             }
         }
@@ -88,6 +91,44 @@ class MetaCampaignLeadSyncService
         $importBatch = 'meta_camp_'.$metaCampaignId.'_'.now()->format('Ymd_His');
         $assigneeId = $this->defaultAssigneeId($advertisingCampaign, $actorUserId);
 
+        $ingestRows = function (array $rows) use (
+            &$created,
+            &$updated,
+            &$skipped,
+            &$seenLeadgenIds,
+            $metaCampaignId,
+            $advertisingCampaign,
+            $importBatch,
+            $assigneeId,
+            $actorUserId,
+        ): void {
+            foreach ($rows as $row) {
+                if (! is_array($row)) {
+                    continue;
+                }
+                $leadgenId = (string) ($row['id'] ?? '');
+                if ($leadgenId === '' || isset($seenLeadgenIds[$leadgenId])) {
+                    continue;
+                }
+                $seenLeadgenIds[$leadgenId] = true;
+
+                $result = $this->upsertLeadgenLead(
+                    $row,
+                    $metaCampaignId,
+                    $advertisingCampaign,
+                    $importBatch,
+                    $assigneeId,
+                    $actorUserId,
+                );
+
+                match ($result) {
+                    'created' => $created++,
+                    'updated' => $updated++,
+                    default => $skipped++,
+                };
+            }
+        };
+
         foreach ($adIds as $adId) {
             $leadsResult = $this->metaAds->listLeadsForAd($adId);
             if (! ($leadsResult['success'] ?? false)) {
@@ -101,39 +142,16 @@ class MetaCampaignLeadSyncService
                 continue;
             }
 
-            foreach (($leadsResult['data'] ?? []) as $row) {
-                if (! is_array($row)) {
-                    continue;
-                }
-                $leadgenId = (string) ($row['id'] ?? '');
-                if ($leadgenId === '' || isset($seenLeadgenIds[$leadgenId])) {
-                    continue;
-                }
-                $seenLeadgenIds[$leadgenId] = true;
-
-                $result = $this->upsertLeadgenLead(
-                    $row,
-                    $metaCampaignId,
-                    $advertisingCampaign,
-                    $importBatch,
-                    $assigneeId,
-                    $actorUserId,
-                );
-
-                match ($result) {
-                    'created' => $created++,
-                    'updated' => $updated++,
-                    default => $skipped++,
-                };
-            }
+            $ingestRows($leadsResult['data'] ?? []);
         }
 
-        // Fallback: forms linked on creatives (covers edge cases where /ad/leads is empty)
+        // Fallback: forms المستخرجة من creative object_story_spec
         foreach ($formIds as $formId) {
             $leadsResult = $this->metaAds->listLeadsForForm($formId);
             if (! ($leadsResult['success'] ?? false)) {
                 continue;
             }
+            $filtered = [];
             foreach (($leadsResult['data'] ?? []) as $row) {
                 if (! is_array($row)) {
                     continue;
@@ -142,26 +160,21 @@ class MetaCampaignLeadSyncService
                 if ($campaignFromLead !== '' && $campaignFromLead !== $metaCampaignId) {
                     continue;
                 }
-                $leadgenId = (string) ($row['id'] ?? '');
-                if ($leadgenId === '' || isset($seenLeadgenIds[$leadgenId])) {
-                    continue;
-                }
-                $seenLeadgenIds[$leadgenId] = true;
+                $filtered[] = $row;
+            }
+            $ingestRows($filtered);
+        }
 
-                $result = $this->upsertLeadgenLead(
-                    $row,
-                    $metaCampaignId,
-                    $advertisingCampaign,
-                    $importBatch,
-                    $assigneeId,
-                    $actorUserId,
-                );
-
-                match ($result) {
-                    'created' => $created++,
-                    'updated' => $updated++,
-                    default => $skipped++,
-                };
+        // Fallback: leads على مستوى الحساب مفلترة بالحملة
+        if ($seenLeadgenIds === []) {
+            $accountLeads = $this->metaAds->listLeadsForCampaign($metaCampaignId);
+            if ($accountLeads['success'] ?? false) {
+                $ingestRows($accountLeads['data'] ?? []);
+            } elseif (! empty($accountLeads['error'])) {
+                Log::info('Meta campaign lead sync: account leads fallback skipped', [
+                    'campaign_id' => $metaCampaignId,
+                    'error' => $accountLeads['error'],
+                ]);
             }
         }
 

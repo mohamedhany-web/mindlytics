@@ -295,10 +295,84 @@ class MetaAdsGraphService
             return ['success' => false, 'error' => 'معرّف الحملة مطلوب'];
         }
 
-        return $this->paginateGet($campaignId.'/ads', [
-            'fields' => 'id,name,status,effective_status,adset_id,campaign_id,creative{id,name,object_story_spec,lead_gen_form_id}',
+        // لا تستخدم creative{lead_gen_form_id} — الحقل غير موجود على AdCreative ويسبب (#100)
+        $withCreative = $this->paginateGet($campaignId.'/ads', [
+            'fields' => 'id,name,status,effective_status,adset_id,campaign_id,creative{id,name,object_story_spec}',
             'limit' => max(1, min(100, $limit)),
         ], 500);
+
+        if ($withCreative['success'] ?? false) {
+            return $withCreative;
+        }
+
+        // مسار أبسط إن فشل حقل creative لأي سبب
+        return $this->paginateGet($campaignId.'/ads', [
+            'fields' => 'id,name,status,effective_status,adset_id,campaign_id',
+            'limit' => max(1, min(100, $limit)),
+        ], 500);
+    }
+
+    /**
+     * استخراج lead gen form id من creative إن وُجد داخل object_story_spec / asset_feed_spec.
+     *
+     * @param  array<string, mixed>  $ad
+     */
+    public function extractLeadGenFormIdFromAd(array $ad): ?string
+    {
+        $creative = is_array($ad['creative'] ?? null) ? $ad['creative'] : [];
+
+        $candidates = [
+            data_get($creative, 'object_story_spec.link_data.call_to_action.value.lead_gen_form_id'),
+            data_get($creative, 'object_story_spec.video_data.call_to_action.value.lead_gen_form_id'),
+            data_get($creative, 'object_story_spec.template_data.call_to_action.value.lead_gen_form_id'),
+        ];
+
+        $assetFeed = $creative['asset_feed_spec'] ?? null;
+        if (is_array($assetFeed)) {
+            foreach (($assetFeed['call_to_actions'] ?? []) as $cta) {
+                if (! is_array($cta)) {
+                    continue;
+                }
+                $candidates[] = data_get($cta, 'value.lead_gen_form_id');
+            }
+        }
+
+        foreach ($candidates as $id) {
+            $id = trim((string) $id);
+            if ($id !== '') {
+                return $id;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * ليدات الحساب المفلترة بحملة معيّنة (مسار احتياطي).
+     *
+     * @return array{success: bool, data?: list<array<string, mixed>>, error?: string}
+     */
+    public function listLeadsForCampaign(string $campaignId, int $limit = 100): array
+    {
+        $account = MetaAdsSettings::adAccountId();
+        $campaignId = trim($campaignId);
+        if ($account === '' || $campaignId === '') {
+            return ['success' => false, 'error' => 'Ad Account أو الحملة غير مضبوطين'];
+        }
+
+        $filtering = json_encode([
+            [
+                'field' => 'campaign.id',
+                'operator' => 'EQUAL',
+                'value' => $campaignId,
+            ],
+        ], JSON_UNESCAPED_SLASHES);
+
+        return $this->paginateGet($account.'/leads', [
+            'fields' => 'id,created_time,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,form_id,is_organic,field_data',
+            'filtering' => $filtering ?: '[]',
+            'limit' => max(1, min(100, $limit)),
+        ], 2000);
     }
 
     /**
