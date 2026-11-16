@@ -26,13 +26,17 @@
             <div class="flex flex-wrap gap-2">
                 @if($campaign->meta_campaign_id)
                     <form method="POST" action="{{ route('admin.advertising-campaigns.sync-meta-leads', $campaign) }}"
-                          onsubmit="return confirm('سحب كل ليدز كامبين ميتا المرتبط إلى الـ CRM؟')">
+                          onsubmit="return confirm('جدولة سحب ليدز كامبين ميتا في الخلفية؟')">
                         @csrf
                         <button type="submit"
                                 class="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-medium">
                             <i class="fas fa-cloud-download-alt"></i> سحب ليدز ميتا
                         </button>
                     </form>
+                    <a href="{{ route('admin.advertising-campaigns.meta.leads', $campaign->meta_campaign_id) }}"
+                       class="inline-flex items-center gap-2 px-4 py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-lg font-medium border border-teal-100">
+                        <i class="fas fa-users"></i> ليدز / Excel
+                    </a>
                 @endif
                 <a href="{{ route('admin.advertising-campaigns.reports', ['campaign_id' => $campaign->id]) }}"
                    class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg font-medium border border-indigo-100">

@@ -38,12 +38,16 @@
             </div>
             <div class="flex flex-wrap gap-2 items-start">
                 <form method="post" action="{{ route('admin.meta-ads.campaigns.sync-leads', $campaign['id']) }}"
-                      onsubmit="return confirm('سحب كل ليدز هذه الحملة من ميتا إلى الـ CRM؟')">
+                      onsubmit="return confirm('جدولة سحب ليدز هذه الحملة في الخلفية؟')">
                     @csrf
                     <button type="submit" class="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold inline-flex items-center gap-2">
-                        <i class="fas fa-cloud-download-alt"></i> سحب الليدز إلى CRM
+                        <i class="fas fa-cloud-download-alt"></i> سحب الليدز (Queue)
                     </button>
                 </form>
+                <a href="{{ route('admin.advertising-campaigns.meta.leads', $campaign['id']) }}"
+                   class="px-4 py-2 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-sm font-bold inline-flex items-center gap-2">
+                    <i class="fas fa-users"></i> ليدز / Excel
+                </a>
                 @if(!empty($linkedAdvertising))
                     <a href="{{ route('admin.advertising-campaigns.edit', $linkedAdvertising) }}"
                        class="px-4 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 text-sm font-bold inline-flex items-center gap-2">

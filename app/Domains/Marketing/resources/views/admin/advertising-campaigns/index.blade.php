@@ -219,13 +219,17 @@
                                             <i class="fas fa-eye"></i> تفاصيل ميتا
                                         </a>
                                         <form method="POST" action="{{ route('admin.advertising-campaigns.meta.sync-leads', $metaId) }}"
-                                              onsubmit="return confirm('سحب ليدز هذه الحملة من ميتا؟')">
+                                              onsubmit="return confirm('جدولة سحب ليدز هذه الحملة في الخلفية؟')">
                                             @csrf
                                             <button type="submit"
                                                     class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-sky-50 text-sky-700 hover:bg-sky-100">
                                                 <i class="fas fa-cloud-download-alt"></i> سحب ليدز
                                             </button>
                                         </form>
+                                        <a href="{{ route('admin.advertising-campaigns.meta.leads', $metaId) }}"
+                                           class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-teal-50 text-teal-700 hover:bg-teal-100">
+                                            <i class="fas fa-users"></i> ليدز / Excel
+                                        </a>
                                         <a href="{{ route('admin.advertising-campaigns.meta.local-settings', $metaId) }}"
                                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
                                             <i class="fas fa-users-cog"></i> تكلفة / سيلز

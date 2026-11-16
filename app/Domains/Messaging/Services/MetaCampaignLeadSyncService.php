@@ -323,7 +323,9 @@ class MetaCampaignLeadSyncService
             'conversations_linked' => $conversationsLinked,
             'errors' => $errors,
             'advertising_campaign_id' => $advertisingCampaign?->id,
+            'import_batch' => $importBatch,
             'diagnostics' => [
+                'import_batch' => $importBatch,
                 'ads' => count($adIds),
                 'forms' => count($formIds),
                 'ad_lead_hits' => $adLeadHits,

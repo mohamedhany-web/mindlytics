@@ -5,7 +5,7 @@ namespace App\Domains\Messaging\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Domains\Marketing\Models\AdvertisingCampaign;
 use App\Domains\Messaging\Services\MetaAdsGraphService;
-use App\Domains\Messaging\Services\MetaCampaignLeadSyncService;
+use App\Domains\Messaging\Services\MetaCampaignLeadSyncDispatcher;
 use App\Domains\Messaging\Support\MetaAdsSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -140,7 +140,7 @@ class MetaAdsCampaignController extends Controller
         ]);
     }
 
-    public function syncLeads(string $campaign, MetaCampaignLeadSyncService $sync, MetaAdsGraphService $metaAds): RedirectResponse
+    public function syncLeads(string $campaign, MetaCampaignLeadSyncDispatcher $dispatcher, MetaAdsGraphService $metaAds): RedirectResponse
     {
         if (! MetaAdsSettings::isReady()) {
             return redirect()->route('admin.meta-ads.settings');
@@ -153,15 +153,10 @@ class MetaAdsCampaignController extends Controller
 
         $linked = AdvertisingCampaign::query()->where('meta_campaign_id', $campaign)->first();
 
-        $result = $sync->syncByMetaCampaignId(
-            $campaign,
-            $linked,
-            $name,
-            Auth::id(),
-        );
+        $result = $dispatcher->queue($campaign, $name, $linked, Auth::id());
 
         return redirect()
-            ->route('admin.meta-ads.campaigns.show', $campaign)
+            ->route('admin.advertising-campaigns.meta.leads', $campaign)
             ->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 

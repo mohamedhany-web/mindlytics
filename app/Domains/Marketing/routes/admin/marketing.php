@@ -4,6 +4,7 @@ use App\Domains\Marketing\Http\Controllers\Admin\AdvertisingCampaignController;
 use App\Domains\Marketing\Http\Controllers\Admin\InstructorPersonalBrandingController;
 use App\Domains\Marketing\Http\Controllers\Admin\MarketingRegionsController;
 use App\Domains\Marketing\Http\Controllers\Admin\MarketingWebAnalyticsController;
+use App\Domains\Marketing\Http\Controllers\Admin\MetaCampaignLeadsController;
 use App\Domains\Marketing\Http\Controllers\Admin\PopupAdController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +25,12 @@ Route::get('advertising-campaigns/meta/{metaCampaign}/local-settings', [Advertis
 Route::post('advertising-campaigns/meta/{metaCampaign}/sync-leads', [AdvertisingCampaignController::class, 'syncMetaCampaignLeads'])
     ->where('metaCampaign', '[0-9]+')
     ->name('advertising-campaigns.meta.sync-leads');
+Route::get('advertising-campaigns/meta/{metaCampaign}/leads', [MetaCampaignLeadsController::class, 'index'])
+    ->where('metaCampaign', '[0-9]+')
+    ->name('advertising-campaigns.meta.leads');
+Route::get('advertising-campaigns/meta/{metaCampaign}/leads/export', [MetaCampaignLeadsController::class, 'export'])
+    ->where('metaCampaign', '[0-9]+')
+    ->name('advertising-campaigns.meta.leads.export');
 Route::post('advertising-campaigns/{advertising_campaign}/sync-meta-leads', [AdvertisingCampaignController::class, 'syncMetaLeads'])
     ->name('advertising-campaigns.sync-meta-leads');
 Route::resource('advertising-campaigns', AdvertisingCampaignController::class)->except(['show']);

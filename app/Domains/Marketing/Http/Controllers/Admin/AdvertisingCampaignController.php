@@ -7,7 +7,7 @@ use App\Domains\Marketing\Models\AdvertisingCampaign;
 use App\Domains\Marketing\Models\CampaignDailyReport;
 use App\Domains\Marketing\Services\CampaignReportService;
 use App\Domains\Messaging\Services\MetaAdsGraphService;
-use App\Domains\Messaging\Services\MetaCampaignLeadSyncService;
+use App\Domains\Messaging\Services\MetaCampaignLeadSyncDispatcher;
 use App\Domains\Messaging\Support\MetaAdsSettings;
 use App\Models\User;
 use Carbon\Carbon;
@@ -116,7 +116,7 @@ class AdvertisingCampaignController extends Controller
 
     public function syncMetaCampaignLeads(
         string $metaCampaign,
-        MetaCampaignLeadSyncService $sync,
+        MetaCampaignLeadSyncDispatcher $dispatcher,
         MetaAdsGraphService $metaAds,
     ): RedirectResponse {
         $metaCampaign = trim($metaCampaign);
@@ -129,10 +129,10 @@ class AdvertisingCampaignController extends Controller
         }
 
         $local = AdvertisingCampaign::query()->where('meta_campaign_id', $metaCampaign)->first();
-        $result = $sync->syncByMetaCampaignId($metaCampaign, $local, $name, Auth::id());
+        $result = $dispatcher->queue($metaCampaign, $name, $local, Auth::id());
 
         return redirect()
-            ->route('admin.advertising-campaigns.index')
+            ->route('admin.advertising-campaigns.meta.leads', $metaCampaign)
             ->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 
@@ -204,7 +204,7 @@ class AdvertisingCampaignController extends Controller
 
     public function syncMetaLeads(
         AdvertisingCampaign $advertisingCampaign,
-        MetaCampaignLeadSyncService $sync,
+        MetaCampaignLeadSyncDispatcher $dispatcher,
     ): RedirectResponse {
         $metaCampaignId = trim((string) ($advertisingCampaign->meta_campaign_id ?? ''));
         if ($metaCampaignId === '') {
@@ -213,15 +213,15 @@ class AdvertisingCampaignController extends Controller
                 ->with('error', 'اربط الحملة بكامبين Meta أولاً ثم اسحب الليدز.');
         }
 
-        $result = $sync->syncByMetaCampaignId(
+        $result = $dispatcher->queue(
             $metaCampaignId,
-            $advertisingCampaign,
             $advertisingCampaign->meta_campaign_name,
+            $advertisingCampaign,
             Auth::id(),
         );
 
         return redirect()
-            ->route('admin.advertising-campaigns.edit', $advertisingCampaign)
+            ->route('admin.advertising-campaigns.meta.leads', $metaCampaignId)
             ->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 

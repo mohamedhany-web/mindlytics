@@ -60,6 +60,12 @@ class MessagingServiceProvider extends ServiceProvider
                 ->everyMinute()
                 ->withoutOverlapping()
                 ->runInBackground();
+
+            // سحب ليدز Meta Ads وغيره من مهام الـ default queue
+            $schedule->command('queue:work --queue=default --stop-when-empty --max-time=55 --max-jobs=20')
+                ->everyMinute()
+                ->withoutOverlapping()
+                ->runInBackground();
         });
     }
 }
