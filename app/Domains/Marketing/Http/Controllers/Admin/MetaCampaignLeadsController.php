@@ -49,6 +49,12 @@ class MetaCampaignLeadsController extends Controller
             'total' => (clone $statsBase)->count(),
             'forms' => (clone $statsBase)->whereNotNull('meta_leadgen_id')->count(),
             'inbox' => (clone $statsBase)->whereNull('meta_leadgen_id')->count(),
+            'verified' => (clone $statsBase)->where(function ($q) {
+                $q->whereNotNull('meta_leadgen_id')
+                    ->orWhere(function ($w) {
+                        $w->whereNotNull('meta_ad_id')->where('meta_ad_id', '!=', '');
+                    });
+            })->count(),
             'unassigned' => (clone $statsBase)->where(function ($q) {
                 $q->whereNull('assigned_to')->orWhere('assigned_to', 0);
             })->count(),

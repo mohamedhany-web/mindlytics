@@ -54,10 +54,20 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
+        <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 mt-6 text-xs text-amber-950 leading-relaxed">
+            <i class="fas fa-shield-halved ml-1"></i>
+            الربط المعتمد فقط: <strong>Lead Form</strong> أو محادثة فيها <strong>Ad ID</strong> من إعلانات هذه الحملة / إحالة webhook.
+            أي ربط سابق من «فترة زمنية» بدون إثبات إعلان يتم تنظيفه عند إعادة السحب.
+        </div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mt-4">
             <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <p class="text-[11px] text-slate-500 font-semibold">إجمالي الليدز</p>
                 <p class="text-2xl font-black text-slate-900 mt-1" data-stat-total>{{ number_format($stats['total']) }}</p>
+            </div>
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                <p class="text-[11px] text-emerald-700 font-semibold">موثّق للحملة</p>
+                <p class="text-2xl font-black text-emerald-900 mt-1">{{ number_format($stats['verified'] ?? 0) }}</p>
             </div>
             <div class="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3">
                 <p class="text-[11px] text-teal-700 font-semibold">Lead Forms</p>
@@ -232,8 +242,10 @@
                         <td class="px-4 py-3">
                             @if($lead->meta_leadgen_id)
                                 <span class="inline-flex px-2 py-1 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800">Lead Form</span>
+                            @elseif(filled($lead->meta_ad_id))
+                                <span class="inline-flex px-2 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">محادثة موثّقة</span>
                             @else
-                                <span class="inline-flex px-2 py-1 rounded-full text-[11px] font-bold bg-sky-100 text-sky-800">محادثة</span>
+                                <span class="inline-flex px-2 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900">غير موثّق</span>
                             @endif
                         </td>
                         <td class="px-4 py-3 text-slate-700">{{ \App\Domains\Sales\Models\SalesLead::stageLabel($lead->stage) }}</td>

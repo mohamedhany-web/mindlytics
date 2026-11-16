@@ -276,11 +276,10 @@ class MetaCampaignLeadSyncService
             }
         }
 
-        // مسار الرسائل: أولاً حوّل المحادثات الموجودة محلياً (تظهر أول بأول) ثم زامن Inbox
+        // مسار الرسائل: ربط صارم فقط (ad_id / إحالة موثّقة) — بدون نافذة زمنية عامة
         $inboxSync = ['synced' => 0, 'messages' => 0];
         $referralBackfill = ['matched' => 0, 'scanned' => 0];
-        $campaignWindow = $this->campaignTimeWindow($metaCampaignId);
-        $useMessagingFallback = ! empty($capability['looks_like_messaging']) || ($adLeadHits === 0 && $formLeadHits === 0);
+        $attributionPurge = ['conversations_cleared' => 0, 'leads_cleared' => 0];
 
         $conversationProgress = function (int $linked) use (
             &$created,
@@ -293,7 +292,7 @@ class MetaCampaignLeadSyncService
             $conversationsLinked = $linked;
             $report(
                 'conversations',
-                "جاري تحويل المحادثات لليدز… {$linked} عميل",
+                "جاري تحويل المحادثات الموثّقة لليدز… {$linked} عميل",
                 $created,
                 $updated,
                 $skipped,
@@ -302,26 +301,20 @@ class MetaCampaignLeadSyncService
             );
         };
 
-        $report('conversations', 'جاري تحويل المحادثات المحلية الموجودة إلى ليدز…', $created, $updated, $skipped, 0, $importBatch);
-        $conversationsLinked = $this->syncAdConversations(
-            $metaCampaignId,
-            $adIds,
-            $advertisingCampaign,
-            $assigneeId,
-            $actorUserId,
-            $importBatch,
-            $useMessagingFallback,
-            $campaignWindow,
-            $conversationProgress,
-        );
+        $report('cleanup', 'جاري تنظيف الربط غير الموثّق السابق لهذه الحملة…', $created, $updated, $skipped, 0, $importBatch);
+        try {
+            $attributionPurge = $this->purgeUnverifiedCampaignAttributions($metaCampaignId, $adIds);
+        } catch (\Throwable $e) {
+            Log::warning('Meta campaign attribution purge failed', ['error' => $e->getMessage()]);
+        }
 
         $report(
             'inbox',
-            "جاري مزامنة Inbox من ميتا… (ظهر حتى الآن {$conversationsLinked} من المحادثات)",
+            'جاري مزامنة Inbox من ميتا لاستخراج إحالات الإعلان…',
             $created,
             $updated,
             $skipped,
-            $conversationsLinked,
+            0,
             $importBatch,
         );
 
@@ -341,11 +334,11 @@ class MetaCampaignLeadSyncService
 
         $report(
             'referrals',
-            'جاري مطابقة إحالات الإعلانات…',
+            'جاري مطابقة إحالات الإعلانات على المحادثات…',
             $created,
             $updated,
             $skipped,
-            $conversationsLinked,
+            0,
             $importBatch,
         );
 
@@ -357,11 +350,11 @@ class MetaCampaignLeadSyncService
 
         $report(
             'conversations',
-            'جاري تحويل المحادثات الجديدة بعد المزامنة…',
+            'جاري تحويل المحادثات المربوطة بإعلان الحملة فقط…',
             $created,
             $updated,
             $skipped,
-            $conversationsLinked,
+            0,
             $importBatch,
         );
 
@@ -372,8 +365,6 @@ class MetaCampaignLeadSyncService
             $assigneeId,
             $actorUserId,
             $importBatch,
-            $useMessagingFallback,
-            $campaignWindow,
             $conversationProgress,
         );
 
@@ -419,12 +410,20 @@ class MetaCampaignLeadSyncService
             if (count($adIds) === 0) {
                 $message .= 'لا توجد إعلانات تحت الحملة.';
             } elseif (! empty($capability['looks_like_messaging'])) {
-                $message .= 'الحملة رسائل/تفاعل. ميتا مش بترجع أرقام العملاء من Ads API — بنسحبهم من Inbox المحادثات المرتبطة بالإعلان. تأكد إن الصفحات مفعّلة في السوشيال وأن الـ webhook شغال عشان الإحالات تتسجل.';
+                $message .= 'الحملة رسائل/تفاعل. بنحسب فقط المحادثات اللي فيها إحالة إعلان موثّقة (ad_id من إعلانات الحملة أو campaign_id من webhook). تأكد إن Webhook messaging_referrals شغال عشان الإحالات الجديدة تتسجل.';
             } elseif (! empty($capability['looks_like_lead_form']) && $adLeadErrors !== []) {
                 $message .= 'الحملة شكلها Lead Form لكن API رفض القراءة: '.implode(' | ', $adLeadErrors);
             } else {
                 $message .= 'مفيش ليدات فورم ولا محادثات منسوبة لإعلانات الحملة حالياً.';
             }
+        }
+
+        if (($attributionPurge['leads_cleared'] ?? 0) > 0 || ($attributionPurge['conversations_cleared'] ?? 0) > 0) {
+            $message .= sprintf(
+                ' | تنظيف ربط غير موثّق: ليدز=%d · محادثات=%d.',
+                (int) ($attributionPurge['leads_cleared'] ?? 0),
+                (int) ($attributionPurge['conversations_cleared'] ?? 0),
+            );
         }
 
         return [
@@ -450,7 +449,84 @@ class MetaCampaignLeadSyncService
                 'form_discovery_error' => $formDiscoveryError,
                 'inbox_sync' => $inboxSync,
                 'referral_backfill' => $referralBackfill,
+                'attribution_purge' => $attributionPurge,
+                'attribution_mode' => 'strict_ad_or_referral',
             ],
+        ];
+    }
+
+    /**
+     * إزالة ربط الحملة عن محادثات/ليدز بدون إثبات إعلان (ad_id ضمن إعلانات الحملة أو Lead Form).
+     *
+     * @param  list<string>  $adIds
+     * @return array{conversations_cleared: int, leads_cleared: int}
+     */
+    public function purgeUnverifiedCampaignAttributions(string $metaCampaignId, array $adIds): array
+    {
+        $conversationsCleared = 0;
+        $leadsCleared = 0;
+        $adIds = array_values(array_filter(array_map('strval', $adIds)));
+
+        if (Schema::hasTable('meta_social_conversations')
+            && Schema::hasColumn('meta_social_conversations', 'meta_campaign_id')) {
+            $q = MetaSocialConversation::query()->where('meta_campaign_id', $metaCampaignId);
+            if ($adIds !== []) {
+                $q->where(function ($w) use ($adIds) {
+                    $w->whereNull('meta_ad_id')
+                        ->orWhere('meta_ad_id', '')
+                        ->orWhereNotIn('meta_ad_id', $adIds);
+                });
+            } else {
+                $q->where(function ($w) {
+                    $w->whereNull('meta_ad_id')->orWhere('meta_ad_id', '');
+                });
+            }
+
+            $q->orderBy('id')->chunkById(500, function ($chunk) use (&$conversationsCleared) {
+                foreach ($chunk as $conversation) {
+                    /** @var MetaSocialConversation $conversation */
+                    $meta = is_array($conversation->meta) ? $conversation->meta : [];
+                    $meta['attribution_purged_at'] = now()->toIso8601String();
+                    $meta['attribution_purge_reason'] = 'unverified_campaign_link';
+                    $conversation->forceFill([
+                        'meta_campaign_id' => null,
+                        'meta' => $meta,
+                    ])->save();
+                    $conversationsCleared++;
+                }
+            });
+        }
+
+        $leadQuery = SalesLead::query()
+            ->where('meta_campaign_id', $metaCampaignId)
+            ->whereNull('meta_leadgen_id');
+
+        if ($adIds !== []) {
+            $leadQuery->where(function ($w) use ($adIds) {
+                $w->whereNull('meta_ad_id')
+                    ->orWhere('meta_ad_id', '')
+                    ->orWhereNotIn('meta_ad_id', $adIds);
+            });
+        } else {
+            $leadQuery->where(function ($w) {
+                $w->whereNull('meta_ad_id')->orWhere('meta_ad_id', '');
+            });
+        }
+
+        $leadQuery->orderBy('id')->chunkById(500, function ($chunk) use (&$leadsCleared) {
+            foreach ($chunk as $lead) {
+                /** @var SalesLead $lead */
+                $lead->forceFill([
+                    'meta_campaign_id' => null,
+                    'advertising_campaign_id' => null,
+                ])->save();
+                $leadsCleared++;
+            }
+        });
+
+        return [
+            'conversations_cleared' => $conversationsCleared,
+            'leads_cleared' => $leadsCleared,
         ];
     }
 
@@ -598,6 +674,8 @@ class MetaCampaignLeadSyncService
      * @param  array{from: ?\Carbon\Carbon, to: ?\Carbon\Carbon}  $campaignWindow
      */
     /**
+     * يحّول فقط المحادثات الموثّقة لهذه الحملة (ad_id ضمن إعلاناتها أو إحالة campaign_id).
+     *
      * @param  null|callable(int $linked): void  $onProgress
      */
     private function syncAdConversations(
@@ -607,8 +685,6 @@ class MetaCampaignLeadSyncService
         ?int $assigneeId,
         ?int $actorUserId,
         string $importBatch,
-        bool $includeMessagingWindowFallback = false,
-        array $campaignWindow = ['from' => null, 'to' => null],
         ?callable $onProgress = null,
     ): int {
         if (! Schema::hasTable('meta_social_conversations')
@@ -616,18 +692,37 @@ class MetaCampaignLeadSyncService
             return 0;
         }
 
-        $conversationIds = MetaSocialConversation::query()
-            ->where(function ($q) use ($metaCampaignId, $adIds) {
-                $q->where('meta_campaign_id', $metaCampaignId);
+        $adIds = array_values(array_filter(array_map('strval', $adIds)));
+        $adLookup = array_fill_keys($adIds, true);
+        $conversationIds = [];
+
+        // 1) محادثات عليها ad_id من إعلانات الحملة
+        if ($adIds !== []) {
+            $conversationIds = MetaSocialConversation::query()
+                ->whereIn('meta_ad_id', $adIds)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+
+        // 2) محادثات عليها campaign_id من إحالة موثّقة + ad_id (إن وُجد) تابع للحملة
+        $referred = MetaSocialConversation::query()
+            ->where('meta_campaign_id', $metaCampaignId)
+            ->where(function ($q) use ($adIds) {
                 if ($adIds !== []) {
-                    $q->orWhereIn('meta_ad_id', $adIds);
+                    $q->whereIn('meta_ad_id', $adIds);
+                } else {
+                    // بدون قائمة إعلانات: نقبل فقط لو meta فيها ad_referral.campaign_id
+                    $q->where('meta', 'like', '%"campaign_id":"'.$metaCampaignId.'"%')
+                        ->orWhere('meta', 'like', '%"campaign_id": '.$metaCampaignId.'%');
                 }
             })
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->all();
+        $conversationIds = array_values(array_unique(array_merge($conversationIds, $referred)));
 
-        // محادثات ظهر فيها معرّف إعلان الحملة داخل meta الرسائل
+        // 3) محادثات ظهر فيها معرّف إعلان الحملة داخل meta الرسائل
         if ($adIds !== [] && Schema::hasTable('meta_social_messages')) {
             $fromMessages = MetaSocialMessage::query()
                 ->where(function ($q) use ($adIds) {
@@ -640,30 +735,6 @@ class MetaCampaignLeadSyncService
                 ->map(fn ($id) => (int) $id)
                 ->all();
             $conversationIds = array_values(array_unique(array_merge($conversationIds, $fromMessages)));
-        }
-
-        // للحملات الرسائل: ادمج كل محادثات فترة تشغيل الكامبين (مش بس أول 500)
-        if ($includeMessagingWindowFallback && ($campaignWindow['from'] ?? null)) {
-            $windowQuery = MetaSocialConversation::query()
-                ->where(function ($q) use ($metaCampaignId) {
-                    $q->whereNull('meta_campaign_id')
-                        ->orWhere('meta_campaign_id', $metaCampaignId);
-                });
-            if ($campaignWindow['from']) {
-                $windowQuery->where('last_message_at', '>=', $campaignWindow['from']);
-            }
-            if ($campaignWindow['to']) {
-                $windowQuery->where('last_message_at', '<=', $campaignWindow['to']);
-            }
-
-            $windowIds = [];
-            $windowQuery->orderBy('id')->select('id')->chunkById(1000, function ($chunk) use (&$windowIds) {
-                foreach ($chunk as $row) {
-                    $windowIds[] = (int) $row->id;
-                }
-            });
-
-            $conversationIds = array_values(array_unique(array_merge($conversationIds, $windowIds)));
         }
 
         if ($conversationIds === []) {
@@ -681,12 +752,22 @@ class MetaCampaignLeadSyncService
                 }
 
                 $conversation->refresh();
-                if (! $conversation->meta_campaign_id) {
-                    $conversation->meta_campaign_id = $metaCampaignId;
+
+                if (! $this->conversationVerifiedForCampaign($conversation, $metaCampaignId, $adLookup)) {
+                    continue;
                 }
-                if (! $conversation->meta_ad_id && count($adIds) === 1) {
-                    $conversation->meta_ad_id = $adIds[0];
+
+                $adId = (string) ($conversation->meta_ad_id ?? '');
+                if ($adId === '' || ! isset($adLookup[$adId])) {
+                    // استخرج ad_id من meta إن أمكن
+                    $fromMeta = $this->extractCampaignAdIdFromConversation($conversation, $adLookup);
+                    if ($fromMeta) {
+                        $conversation->meta_ad_id = $fromMeta;
+                        $adId = $fromMeta;
+                    }
                 }
+
+                $conversation->meta_campaign_id = $metaCampaignId;
                 $conversation->save();
 
                 $lead = null;
@@ -726,7 +807,7 @@ class MetaCampaignLeadSyncService
 
                 $updates = array_filter([
                     'meta_campaign_id' => $metaCampaignId,
-                    'meta_ad_id' => $conversation->meta_ad_id ?: $lead->meta_ad_id,
+                    'meta_ad_id' => $adId !== '' ? $adId : ($lead->meta_ad_id ?: null),
                     'advertising_campaign_id' => $advertisingCampaign?->id ?? $lead->advertising_campaign_id,
                     'source' => in_array((string) $lead->source, ['social', 'other', ''], true) ? 'meta_ads' : $lead->source,
                     'import_batch' => $importBatch,
@@ -746,6 +827,68 @@ class MetaCampaignLeadSyncService
         }
 
         return $linked;
+    }
+
+    /**
+     * @param  array<string, true>  $adLookup
+     */
+    private function conversationVerifiedForCampaign(
+        MetaSocialConversation $conversation,
+        string $metaCampaignId,
+        array $adLookup,
+    ): bool {
+        $adId = (string) ($conversation->meta_ad_id ?? '');
+        if ($adId !== '' && isset($adLookup[$adId])) {
+            return true;
+        }
+
+        if ($this->extractCampaignAdIdFromConversation($conversation, $adLookup)) {
+            return true;
+        }
+
+        $meta = is_array($conversation->meta) ? $conversation->meta : [];
+        $referralCampaign = (string) data_get($meta, 'ad_referral.campaign_id', '');
+        if ($referralCampaign !== '' && $referralCampaign === $metaCampaignId) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string, true>  $adLookup
+     */
+    private function extractCampaignAdIdFromConversation(
+        MetaSocialConversation $conversation,
+        array $adLookup,
+    ): ?string {
+        $meta = is_array($conversation->meta) ? $conversation->meta : [];
+        $referralAd = (string) data_get($meta, 'ad_referral.ad_id', '');
+        if ($referralAd !== '' && isset($adLookup[$referralAd])) {
+            return $referralAd;
+        }
+
+        if ($adLookup === [] || ! Schema::hasTable('meta_social_messages')) {
+            return null;
+        }
+
+        $messages = MetaSocialMessage::query()
+            ->where('meta_social_conversation_id', $conversation->id)
+            ->whereNotNull('meta')
+            ->orderByDesc('id')
+            ->limit(40)
+            ->get(['meta']);
+
+        foreach ($messages as $message) {
+            $blob = json_encode($message->meta, JSON_UNESCAPED_UNICODE) ?: '';
+            foreach ($adLookup as $adId => $_) {
+                if ($adId !== '' && str_contains($blob, $adId)) {
+                    return (string) $adId;
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
