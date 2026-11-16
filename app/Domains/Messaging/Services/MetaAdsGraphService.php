@@ -249,7 +249,7 @@ class MetaAdsGraphService
     public function getCampaign(string $campaignId): array
     {
         $result = $this->get($campaignId, [
-            'fields' => 'id,name,status,effective_status,objective,daily_budget,lifetime_budget,created_time,updated_time',
+            'fields' => 'id,name,status,effective_status,objective,daily_budget,lifetime_budget,created_time,updated_time,start_time,stop_time',
         ]);
 
         if (! ($result['success'] ?? false)) {

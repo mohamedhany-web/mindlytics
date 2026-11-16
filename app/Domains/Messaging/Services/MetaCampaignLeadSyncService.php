@@ -4,6 +4,7 @@ namespace App\Domains\Messaging\Services;
 
 use App\Domains\Marketing\Models\AdvertisingCampaign;
 use App\Domains\Messaging\Models\MetaSocialConversation;
+use App\Domains\Messaging\Models\MetaSocialMessage;
 use App\Domains\Sales\Models\SalesLead;
 use App\Domains\Sales\Models\SalesLeadCategory;
 use Illuminate\Support\Facades\Log;
@@ -14,6 +15,8 @@ class MetaCampaignLeadSyncService
     public function __construct(
         private MetaAdsGraphService $metaAds,
         private MetaSocialCrmService $crm,
+        private MetaSocialInboxService $inbox,
+        private MetaSocialContactCaptureService $contactCapture,
     ) {}
 
     /**
@@ -226,6 +229,30 @@ class MetaCampaignLeadSyncService
             }
         }
 
+        // مسار الرسائل: مزامنة Inbox + مطابقة إحالات الإعلان + تحويل المحادثات لليدز CRM
+        $inboxSync = ['synced' => 0, 'messages' => 0];
+        $referralBackfill = ['matched' => 0, 'scanned' => 0];
+        try {
+            $history = $this->inbox->syncHistoryFromMeta(null, 8);
+            if ($history['success'] ?? false) {
+                $inboxSync = [
+                    'synced' => (int) ($history['synced'] ?? 0),
+                    'messages' => (int) ($history['messages'] ?? 0),
+                ];
+            } elseif (! empty($history['error'])) {
+                $errors[] = 'مزامنة Inbox: '.$history['error'];
+            }
+        } catch (\Throwable $e) {
+            $errors[] = 'مزامنة Inbox: '.$e->getMessage();
+        }
+
+        try {
+            $referralBackfill = $this->inbox->backfillAdReferralsForAds($adIds, $metaCampaignId);
+        } catch (\Throwable $e) {
+            Log::warning('Meta campaign referral backfill failed', ['error' => $e->getMessage()]);
+        }
+
+        $campaignWindow = $this->campaignTimeWindow($metaCampaignId);
         $conversationsLinked = $this->syncAdConversations(
             $metaCampaignId,
             $adIds,
@@ -233,6 +260,8 @@ class MetaCampaignLeadSyncService
             $assigneeId,
             $actorUserId,
             $importBatch,
+            ! empty($capability['looks_like_messaging']) || ($adLeadHits === 0 && $formLeadHits === 0),
+            $campaignWindow,
         );
 
         if ($advertisingCampaign) {
@@ -244,29 +273,30 @@ class MetaCampaignLeadSyncService
         }
 
         $parts = [
-            "جديدة: {$created}",
+            "ليدز فورم جديدة: {$created}",
             "محدَّثة: {$updated}",
-            "متخطاة: {$skipped}",
-            "محادثات مربوطة: {$conversationsLinked}",
+            "عملاء من المحادثات: {$conversationsLinked}",
+            "محادثات ميتا: ".((int) ($inboxSync['synced'] ?? 0)),
+            "إحالات اتضبطت: ".((int) ($referralBackfill['matched'] ?? 0)),
         ];
         if ($errors !== []) {
             $parts[] = 'تحذيرات: '.implode(' | ', array_slice($errors, 0, 2));
         }
 
-        $message = 'تم سحب ليدز الكامبين — '.implode(' · ', $parts);
-        if ($created === 0 && $updated === 0 && $skipped === 0 && $conversationsLinked === 0) {
+        $message = 'تم سحب بيانات عملاء الكامبين — '.implode(' · ', $parts);
+        if ($created === 0 && $updated === 0 && $conversationsLinked === 0) {
             $objective = $capability['objective'] ?? '—';
             $goals = implode(',', $capability['optimization_goals'] ?? []) ?: '—';
             $dest = implode(',', $capability['destination_types'] ?? []) ?: '—';
             $ctas = implode(',', $capability['cta_types'] ?? []) ?: '—';
 
             $message .= sprintf(
-                ' | تشخيص: إعلانات=%d · فورم=%d · ليدات من إعلان=%d · ليدات من فورم=%d · إعلان فاضي=%d · objective=%s · goals=%s · destination=%s · CTA=%s. ',
+                ' | تشخيص: إعلانات=%d · فورم=%d · ليدات فورم=%d · Inbox=%d · إحالات=%d · objective=%s · goals=%s · destination=%s · CTA=%s. ',
                 count($adIds),
                 count($formIds),
-                $adLeadHits,
-                $formLeadHits,
-                $adLeadEmpty,
+                $adLeadHits + $formLeadHits,
+                (int) ($inboxSync['synced'] ?? 0),
+                (int) ($referralBackfill['matched'] ?? 0),
                 $objective,
                 $goals,
                 $dest,
@@ -276,19 +306,11 @@ class MetaCampaignLeadSyncService
             if (count($adIds) === 0) {
                 $message .= 'لا توجد إعلانات تحت الحملة.';
             } elseif (! empty($capability['looks_like_messaging'])) {
-                $message .= 'الحملة دي مش Instant Form — هدفها رسائل/تفاعل (Messenger/WhatsApp/زيارات). سحب Lead Ads مش هيجيب ليدات هنا. الليدز هتيجي من الـ Inbox لما العميل يكتب، أو أنشئ حملة Lead Ads بفورم.';
+                $message .= 'الحملة رسائل/تفاعل. ميتا مش بترجع أرقام العملاء من Ads API — بنسحبهم من Inbox المحادثات المرتبطة بالإعلان. تأكد إن الصفحات مفعّلة في السوشيال وأن الـ webhook شغال عشان الإحالات تتسجل.';
             } elseif (! empty($capability['looks_like_lead_form']) && $adLeadErrors !== []) {
-                $message .= 'الحملة شكلها Lead Form لكن API رفض القراءة: '.implode(' | ', $adLeadErrors).' — أعد الربط بصلاحية leads_retrieval وفعّل الصفحة في السوشيال.';
-            } elseif (! empty($capability['looks_like_lead_form']) && $formDiscoveryError) {
-                $message .= 'شكلها Lead Form لكن فشل اكتشاف الفورم: '.$formDiscoveryError;
-            } elseif (count($formIds) === 0 && $adLeadHits === 0 && $adLeadEmpty === count($adIds) && $adLeadErrors === []) {
-                $message .= 'ميتا رجّعت الإعلانات بدون أي Lead Form submissions (فاضي). إما مفيش حد ملأ فورم، أو الإعلانات مش مربوطة بفورم Instant Form.';
+                $message .= 'الحملة شكلها Lead Form لكن API رفض القراءة: '.implode(' | ', $adLeadErrors);
             } else {
-                $message .= 'اتوجدت مصادر لكن مفيش ليدات مطابقة لهذه الحملة في ميتا.';
-            }
-
-            if ($adLeadErrors !== [] && empty($capability['looks_like_lead_form'])) {
-                $message .= ' أخطاء API: '.implode(' | ', $adLeadErrors);
+                $message .= 'مفيش ليدات فورم ولا محادثات منسوبة لإعلانات الحملة حالياً.';
             }
         }
 
@@ -311,6 +333,8 @@ class MetaCampaignLeadSyncService
                 'ad_lead_errors' => $adLeadErrors,
                 'capability' => $capability,
                 'form_discovery_error' => $formDiscoveryError,
+                'inbox_sync' => $inboxSync,
+                'referral_backfill' => $referralBackfill,
             ],
         ];
     }
@@ -456,6 +480,7 @@ class MetaCampaignLeadSyncService
 
     /**
      * @param  list<string>  $adIds
+     * @param  array{from: ?\Carbon\Carbon, to: ?\Carbon\Carbon}  $campaignWindow
      */
     private function syncAdConversations(
         string $metaCampaignId,
@@ -464,26 +489,82 @@ class MetaCampaignLeadSyncService
         ?int $assigneeId,
         ?int $actorUserId,
         string $importBatch,
+        bool $includeMessagingWindowFallback = false,
+        array $campaignWindow = ['from' => null, 'to' => null],
     ): int {
         if (! Schema::hasTable('meta_social_conversations')
             || ! Schema::hasColumn('meta_social_conversations', 'meta_ad_id')) {
             return 0;
         }
 
-        $query = MetaSocialConversation::query()->where(function ($q) use ($metaCampaignId, $adIds) {
-            $q->where('meta_campaign_id', $metaCampaignId);
-            if ($adIds !== []) {
-                $q->orWhereIn('meta_ad_id', $adIds);
+        $conversationIds = MetaSocialConversation::query()
+            ->where(function ($q) use ($metaCampaignId, $adIds) {
+                $q->where('meta_campaign_id', $metaCampaignId);
+                if ($adIds !== []) {
+                    $q->orWhereIn('meta_ad_id', $adIds);
+                }
+            })
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        // محادثات ظهر فيها معرّف إعلان الحملة داخل meta الرسائل
+        if ($adIds !== [] && Schema::hasTable('meta_social_messages')) {
+            $fromMessages = MetaSocialMessage::query()
+                ->where(function ($q) use ($adIds) {
+                    foreach ($adIds as $adId) {
+                        $q->orWhere('meta', 'like', '%'.$adId.'%');
+                    }
+                })
+                ->distinct()
+                ->pluck('meta_social_conversation_id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+            $conversationIds = array_values(array_unique(array_merge($conversationIds, $fromMessages)));
+        }
+
+        // للحملات الرسائل: لو مفيش إحالة، اسحب المحادثات داخل فترة تشغيل الكامبين
+        if ($includeMessagingWindowFallback && $conversationIds === [] && ($campaignWindow['from'] ?? null)) {
+            $windowQuery = MetaSocialConversation::query()
+                ->where(function ($q) use ($metaCampaignId) {
+                    $q->whereNull('meta_campaign_id')
+                        ->orWhere('meta_campaign_id', $metaCampaignId);
+                });
+            if ($campaignWindow['from']) {
+                $windowQuery->where('last_message_at', '>=', $campaignWindow['from']);
             }
-        });
+            if ($campaignWindow['to']) {
+                $windowQuery->where('last_message_at', '<=', $campaignWindow['to']);
+            }
+            $conversationIds = $windowQuery
+                ->orderByDesc('last_message_at')
+                ->limit(500)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+
+        if ($conversationIds === []) {
+            return 0;
+        }
 
         $linked = 0;
-        foreach ($query->cursor() as $conversation) {
+        foreach (MetaSocialConversation::query()->whereIn('id', $conversationIds)->cursor() as $conversation) {
             /** @var MetaSocialConversation $conversation */
+            try {
+                $this->contactCapture->scanConversationHistory($conversation);
+            } catch (\Throwable) {
+                //
+            }
+
+            $conversation->refresh();
             if (! $conversation->meta_campaign_id) {
                 $conversation->meta_campaign_id = $metaCampaignId;
-                $conversation->save();
             }
+            if (! $conversation->meta_ad_id && count($adIds) === 1) {
+                $conversation->meta_ad_id = $adIds[0];
+            }
+            $conversation->save();
 
             $lead = null;
             if ($conversation->sales_lead_id) {
@@ -524,7 +605,7 @@ class MetaCampaignLeadSyncService
                 'meta_campaign_id' => $metaCampaignId,
                 'meta_ad_id' => $conversation->meta_ad_id ?: $lead->meta_ad_id,
                 'advertising_campaign_id' => $advertisingCampaign?->id ?? $lead->advertising_campaign_id,
-                'source' => $lead->source === 'social' ? 'meta_ads' : $lead->source,
+                'source' => in_array((string) $lead->source, ['social', 'other', ''], true) ? 'meta_ads' : $lead->source,
                 'import_batch' => $importBatch,
             ], static fn ($v) => $v !== null && $v !== '');
 
@@ -533,6 +614,45 @@ class MetaCampaignLeadSyncService
         }
 
         return $linked;
+    }
+
+    /**
+     * @return array{from: ?\Carbon\Carbon, to: ?\Carbon\Carbon}
+     */
+    private function campaignTimeWindow(string $metaCampaignId): array
+    {
+        $from = null;
+        $to = null;
+        $campaign = $this->metaAds->getCampaign($metaCampaignId);
+        if ($campaign['success'] ?? false) {
+            $data = $campaign['data'] ?? [];
+            foreach (['start_time', 'created_time'] as $key) {
+                if (! empty($data[$key])) {
+                    try {
+                        $from = \Carbon\Carbon::parse((string) $data[$key])->startOfDay();
+                        break;
+                    } catch (\Throwable) {
+                        //
+                    }
+                }
+            }
+            if (! empty($data['stop_time'])) {
+                try {
+                    $to = \Carbon\Carbon::parse((string) $data['stop_time'])->endOfDay();
+                } catch (\Throwable) {
+                    //
+                }
+            }
+        }
+
+        if (! $from) {
+            $from = now()->subDays(60)->startOfDay();
+        }
+        if (! $to) {
+            $to = now()->endOfDay();
+        }
+
+        return ['from' => $from, 'to' => $to];
     }
 
     private function createConversationLeadWithoutAssignee(

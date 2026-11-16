@@ -178,7 +178,7 @@ class MetaSocialInboxService
         try {
             $url = "{$this->graph->graphUrl()}/{$threadId}/messages";
             $params = [
-                'fields' => 'id,message,from,created_time,attachments{image_data,file_url,type,payload}',
+                'fields' => 'id,message,from,created_time,attachments{image_data,file_url,type,payload},shares',
                 'limit' => 100,
                 'access_token' => (string) $page->page_access_token,
             ];
@@ -324,6 +324,17 @@ class MetaSocialInboxService
 
             $sentAt = isset($msg['created_time']) ? Carbon::parse($msg['created_time']) : now();
 
+            $referral = null;
+            if (is_array($msg['referral'] ?? null)) {
+                $referral = $msg['referral'];
+            } elseif (is_array(data_get($msg, 'shares.data.0'))) {
+                // بعض الردود القديمة تضع سياق الإعلان داخل shares
+                $share = data_get($msg, 'shares.data.0');
+                if (is_array($share) && (isset($share['ad_id']) || isset($share['referral']))) {
+                    $referral = is_array($share['referral'] ?? null) ? $share['referral'] : $share;
+                }
+            }
+
             try {
                 MetaSocialMessage::query()->create([
                     'meta_social_conversation_id' => $conversation->id,
@@ -333,15 +344,86 @@ class MetaSocialInboxService
                     'body' => $body,
                     'attachment_url' => $attachmentUrl,
                     'sent_at' => $sentAt,
-                    'meta' => ['graph_message' => $msg],
+                    'meta' => array_filter([
+                        'graph_message' => $msg,
+                        'ad_referral' => $referral,
+                    ]),
                 ]);
                 $imported++;
+
+                if (is_array($referral)) {
+                    $this->applyAdReferral($conversation->fresh(), $referral);
+                }
             } catch (QueryException) {
                 // unique race — تجاهل التكرار
             }
         }
 
         return $imported;
+    }
+
+    /**
+     * ابحث في الرسائل المحفوظة عن إحالات إعلان وطابقها على المحادثات.
+     *
+     * @param  list<string>  $adIds
+     * @return array{matched: int, scanned: int}
+     */
+    public function backfillAdReferralsForAds(array $adIds, ?string $metaCampaignId = null): array
+    {
+        $adIds = array_values(array_unique(array_filter(array_map(
+            static fn ($id) => trim((string) $id),
+            $adIds
+        ))));
+
+        if ($adIds === [] || ! Schema::hasTable('meta_social_messages')) {
+            return ['matched' => 0, 'scanned' => 0];
+        }
+
+        $matched = 0;
+        $scanned = 0;
+        $lookup = array_fill_keys($adIds, true);
+
+        MetaSocialMessage::query()
+            ->whereNotNull('meta')
+            ->orderByDesc('id')
+            ->chunkById(200, function ($messages) use (&$matched, &$scanned, $lookup, $metaCampaignId) {
+                foreach ($messages as $message) {
+                    $scanned++;
+                    $meta = is_array($message->meta) ? $message->meta : [];
+                    $blob = json_encode($meta, JSON_UNESCAPED_UNICODE) ?: '';
+                    $foundAdId = null;
+                    foreach ($lookup as $adId => $_) {
+                        if ($adId !== '' && str_contains($blob, (string) $adId)) {
+                            $foundAdId = (string) $adId;
+                            break;
+                        }
+                    }
+                    if (! $foundAdId) {
+                        continue;
+                    }
+
+                    $conversation = MetaSocialConversation::query()->find($message->meta_social_conversation_id);
+                    if (! $conversation) {
+                        continue;
+                    }
+
+                    $referral = is_array($meta['ad_referral'] ?? null)
+                        ? $meta['ad_referral']
+                        : ['source' => 'ADS', 'ad_id' => $foundAdId, 'campaign_id' => $metaCampaignId];
+
+                    if (empty($referral['ad_id'])) {
+                        $referral['ad_id'] = $foundAdId;
+                    }
+                    if ($metaCampaignId && empty($referral['campaign_id'])) {
+                        $referral['campaign_id'] = $metaCampaignId;
+                    }
+
+                    $this->applyAdReferral($conversation, $referral);
+                    $matched++;
+                }
+            });
+
+        return ['matched' => $matched, 'scanned' => $scanned];
     }
 
     /**

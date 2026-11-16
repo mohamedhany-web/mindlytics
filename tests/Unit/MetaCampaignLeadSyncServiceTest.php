@@ -4,18 +4,27 @@ namespace Tests\Unit;
 
 use App\Domains\Messaging\Services\MetaAdsGraphService;
 use App\Domains\Messaging\Services\MetaCampaignLeadSyncService;
+use App\Domains\Messaging\Services\MetaSocialContactCaptureService;
 use App\Domains\Messaging\Services\MetaSocialCrmService;
+use App\Domains\Messaging\Services\MetaSocialInboxService;
 use Mockery;
 use Tests\TestCase;
 
 class MetaCampaignLeadSyncServiceTest extends TestCase
 {
+    private function makeService(?MetaAdsGraphService $metaAds = null): MetaCampaignLeadSyncService
+    {
+        return new MetaCampaignLeadSyncService(
+            $metaAds ?? Mockery::mock(MetaAdsGraphService::class),
+            Mockery::mock(MetaSocialCrmService::class),
+            Mockery::mock(MetaSocialInboxService::class),
+            Mockery::mock(MetaSocialContactCaptureService::class),
+        );
+    }
+
     public function test_parse_field_data_extracts_name_phone_email(): void
     {
-        $service = new MetaCampaignLeadSyncService(
-            Mockery::mock(MetaAdsGraphService::class),
-            Mockery::mock(MetaSocialCrmService::class),
-        );
+        $service = $this->makeService();
 
         $parsed = $service->parseFieldData([
             ['name' => 'full_name', 'values' => ['أحمد محمد']],
@@ -30,10 +39,7 @@ class MetaCampaignLeadSyncServiceTest extends TestCase
 
     public function test_parse_field_data_composes_first_last_name(): void
     {
-        $service = new MetaCampaignLeadSyncService(
-            Mockery::mock(MetaAdsGraphService::class),
-            Mockery::mock(MetaSocialCrmService::class),
-        );
+        $service = $this->makeService();
 
         $parsed = $service->parseFieldData([
             ['name' => 'first_name', 'values' => ['Sara']],
