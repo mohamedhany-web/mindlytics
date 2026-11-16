@@ -112,7 +112,11 @@ class MetaCampaignLeadSyncService
         $seenLeadgenIds = [];
         $adLeadAttempts = 0;
         $adLeadHits = 0;
+        $adLeadEmpty = 0;
+        $adLeadErrors = [];
         $formLeadHits = 0;
+        $formDiscoveryError = ($pageForms['success'] ?? false) ? null : (string) ($pageForms['error'] ?? '');
+        $capability = $this->metaAds->summarizeCampaignLeadCapability($metaCampaignId, $ads);
         $importBatch = 'meta_camp_'.$metaCampaignId.'_'.now()->format('Ymd_His');
         $assigneeId = $this->defaultAssigneeId($advertisingCampaign, $actorUserId);
         $adIdLookup = array_fill_keys($adIds, true);
@@ -164,6 +168,9 @@ class MetaCampaignLeadSyncService
             $leadsResult = $this->metaAds->listLeadsForAd($adId);
             if (! ($leadsResult['success'] ?? false)) {
                 $err = (string) ($leadsResult['error'] ?? 'فشل جلب ليدات الإعلان '.$adId);
+                if (count($adLeadErrors) < 3) {
+                    $adLeadErrors[] = $err;
+                }
                 if ($this->looksLikePermissionError($err)) {
                     $errors[] = $err.' — تأكد من صلاحية leads_retrieval.';
                 } else {
@@ -172,7 +179,11 @@ class MetaCampaignLeadSyncService
                 continue;
             }
 
-            $adLeadHits += $ingestRows($leadsResult['data'] ?? []);
+            $rows = $leadsResult['data'] ?? [];
+            if ($rows === []) {
+                $adLeadEmpty++;
+            }
+            $adLeadHits += $ingestRows($rows);
         }
 
         foreach ($formIds as $formId) {
@@ -244,19 +255,40 @@ class MetaCampaignLeadSyncService
 
         $message = 'تم سحب ليدز الكامبين — '.implode(' · ', $parts);
         if ($created === 0 && $updated === 0 && $skipped === 0 && $conversationsLinked === 0) {
+            $objective = $capability['objective'] ?? '—';
+            $goals = implode(',', $capability['optimization_goals'] ?? []) ?: '—';
+            $dest = implode(',', $capability['destination_types'] ?? []) ?: '—';
+            $ctas = implode(',', $capability['cta_types'] ?? []) ?: '—';
+
             $message .= sprintf(
-                ' | تشخيص: إعلانات=%d · فورم=%d · ليدات من إعلان=%d · ليدات من فورم=%d. ',
+                ' | تشخيص: إعلانات=%d · فورم=%d · ليدات من إعلان=%d · ليدات من فورم=%d · إعلان فاضي=%d · objective=%s · goals=%s · destination=%s · CTA=%s. ',
                 count($adIds),
                 count($formIds),
                 $adLeadHits,
                 $formLeadHits,
+                $adLeadEmpty,
+                $objective,
+                $goals,
+                $dest,
+                $ctas,
             );
+
             if (count($adIds) === 0) {
                 $message .= 'لا توجد إعلانات تحت الحملة.';
-            } elseif (count($formIds) === 0 && $adLeadHits === 0) {
-                $message .= 'غالباً الحملة مش Lead Ads Instant Form، أو مفيش صلاحية leads_retrieval / Page token. أعد الربط وفعّل الصفحات في السوشيال.';
+            } elseif (! empty($capability['looks_like_messaging'])) {
+                $message .= 'الحملة دي مش Instant Form — هدفها رسائل/تفاعل (Messenger/WhatsApp/زيارات). سحب Lead Ads مش هيجيب ليدات هنا. الليدز هتيجي من الـ Inbox لما العميل يكتب، أو أنشئ حملة Lead Ads بفورم.';
+            } elseif (! empty($capability['looks_like_lead_form']) && $adLeadErrors !== []) {
+                $message .= 'الحملة شكلها Lead Form لكن API رفض القراءة: '.implode(' | ', $adLeadErrors).' — أعد الربط بصلاحية leads_retrieval وفعّل الصفحة في السوشيال.';
+            } elseif (! empty($capability['looks_like_lead_form']) && $formDiscoveryError) {
+                $message .= 'شكلها Lead Form لكن فشل اكتشاف الفورم: '.$formDiscoveryError;
+            } elseif (count($formIds) === 0 && $adLeadHits === 0 && $adLeadEmpty === count($adIds) && $adLeadErrors === []) {
+                $message .= 'ميتا رجّعت الإعلانات بدون أي Lead Form submissions (فاضي). إما مفيش حد ملأ فورم، أو الإعلانات مش مربوطة بفورم Instant Form.';
             } else {
                 $message .= 'اتوجدت مصادر لكن مفيش ليدات مطابقة لهذه الحملة في ميتا.';
+            }
+
+            if ($adLeadErrors !== [] && empty($capability['looks_like_lead_form'])) {
+                $message .= ' أخطاء API: '.implode(' | ', $adLeadErrors);
             }
         }
 
@@ -275,6 +307,10 @@ class MetaCampaignLeadSyncService
                 'ad_lead_hits' => $adLeadHits,
                 'form_lead_hits' => $formLeadHits,
                 'ad_lead_attempts' => $adLeadAttempts,
+                'ad_lead_empty' => $adLeadEmpty,
+                'ad_lead_errors' => $adLeadErrors,
+                'capability' => $capability,
+                'form_discovery_error' => $formDiscoveryError,
             ],
         ];
     }

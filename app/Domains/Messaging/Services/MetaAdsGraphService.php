@@ -269,8 +269,8 @@ class MetaAdsGraphService
     public function listAdSets(string $campaignId): array
     {
         $result = $this->get($campaignId.'/adsets', [
-            'fields' => 'id,name,status,effective_status,daily_budget,lifetime_budget,targeting,optimization_goal,billing_event,start_time,end_time',
-            'limit' => 25,
+            'fields' => 'id,name,status,effective_status,daily_budget,lifetime_budget,targeting,optimization_goal,destination_type,promoted_object,billing_event,start_time,end_time',
+            'limit' => 50,
         ]);
 
         if (! ($result['success'] ?? false)) {
@@ -295,9 +295,9 @@ class MetaAdsGraphService
             return ['success' => false, 'error' => 'معرّف الحملة مطلوب'];
         }
 
-        // لا تستخدم creative{lead_gen_form_id} — الحقل غير موجود على AdCreative ويسبب (#100)
+        // لا تستخدم creative{lead_gen_form_id} كحقل مباشر — غير موجود على AdCreative (#100)
         $withCreative = $this->paginateGet($campaignId.'/ads', [
-            'fields' => 'id,name,status,effective_status,adset_id,campaign_id,creative{id,name,object_story_spec}',
+            'fields' => 'id,name,status,effective_status,adset_id,campaign_id,creative{id,name,object_story_spec{link_data{call_to_action{type,value}},video_data{call_to_action{type,value}},template_data{call_to_action{type,value}}}}',
             'limit' => max(1, min(100, $limit)),
         ], 500);
 
@@ -345,6 +345,102 @@ class MetaAdsGraphService
         }
 
         return null;
+    }
+
+    /**
+     * نوع CTA من إعلان ميتا (LEAD / MESSAGE / LEARN_MORE ...).
+     *
+     * @param  array<string, mixed>  $ad
+     */
+    public function extractAdCtaType(array $ad): ?string
+    {
+        $creative = is_array($ad['creative'] ?? null) ? $ad['creative'] : [];
+        $types = [
+            data_get($creative, 'object_story_spec.link_data.call_to_action.type'),
+            data_get($creative, 'object_story_spec.video_data.call_to_action.type'),
+            data_get($creative, 'object_story_spec.template_data.call_to_action.type'),
+        ];
+
+        foreach ($types as $type) {
+            $type = strtoupper(trim((string) $type));
+            if ($type !== '') {
+                return $type;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * ملخص نوع الحملة من objective + adsets + CTAs.
+     *
+     * @param  list<array<string, mixed>>  $ads
+     * @return array{objective: ?string, optimization_goals: list<string>, destination_types: list<string>, cta_types: list<string>, looks_like_lead_form: bool, looks_like_messaging: bool}
+     */
+    public function summarizeCampaignLeadCapability(string $campaignId, array $ads = []): array
+    {
+        $objective = null;
+        $goals = [];
+        $destinations = [];
+        $campaign = $this->getCampaign($campaignId);
+        if ($campaign['success'] ?? false) {
+            $objective = (string) (($campaign['data']['objective'] ?? '') ?: '') ?: null;
+            foreach (($campaign['data']['adsets'] ?? []) as $adset) {
+                if (! is_array($adset)) {
+                    continue;
+                }
+                $goal = strtoupper(trim((string) ($adset['optimization_goal'] ?? '')));
+                if ($goal !== '') {
+                    $goals[$goal] = true;
+                }
+                $dest = strtoupper(trim((string) ($adset['destination_type'] ?? '')));
+                if ($dest !== '') {
+                    $destinations[$dest] = true;
+                }
+            }
+        }
+
+        $ctaTypes = [];
+        foreach ($ads as $ad) {
+            if (! is_array($ad)) {
+                continue;
+            }
+            $cta = $this->extractAdCtaType($ad);
+            if ($cta) {
+                $ctaTypes[$cta] = true;
+            }
+        }
+
+        $goalList = array_keys($goals);
+        $destList = array_keys($destinations);
+        $ctaList = array_keys($ctaTypes);
+
+        $looksLikeLeadForm = in_array(strtoupper((string) $objective), ['OUTCOME_LEADS', 'LEAD_GENERATION'], true)
+            || in_array('LEAD_GENERATION', $goalList, true)
+            || in_array('QUALITY_LEAD', $goalList, true)
+            || (bool) array_intersect($ctaList, ['SIGN_UP', 'APPLY_NOW', 'GET_OFFER', 'SUBSCRIBE', 'LEAD_FORM', 'GET_QUOTE']);
+
+        $looksLikeMessaging = in_array(strtoupper((string) $objective), ['OUTCOME_ENGAGEMENT', 'MESSAGES', 'OUTCOME_AWARENESS'], true)
+            || (bool) array_intersect($goalList, ['CONVERSATIONS', 'REPLIES', 'LINK_CLICKS', 'REACH', 'IMPRESSIONS', 'POST_ENGAGEMENT'])
+            || (bool) array_intersect($destList, ['MESSENGER', 'WHATSAPP', 'INSTAGRAM_DIRECT', 'PHONE_CALL'])
+            || (bool) array_intersect($ctaList, ['MESSAGE_PAGE', 'WHATSAPP_MESSAGE', 'CALL_NOW', 'LEARN_MORE', 'SHOP_NOW', 'WATCH_MORE', 'CONTACT_US']);
+
+        // لو فيه فورم صريح نلغي اعتبارها messaging فقط
+        foreach ($ads as $ad) {
+            if (is_array($ad) && $this->extractLeadGenFormIdFromAd($ad)) {
+                $looksLikeLeadForm = true;
+                break;
+            }
+        }
+
+        return [
+            'objective' => $objective,
+            'optimization_goals' => $goalList,
+            'destination_types' => $destList,
+            'cta_types' => $ctaList,
+            'looks_like_lead_form' => $looksLikeLeadForm,
+            'looks_like_messaging' => $looksLikeMessaging && ! $looksLikeLeadForm,
+        ];
     }
 
     /**
