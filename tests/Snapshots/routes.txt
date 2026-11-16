@@ -1673,6 +1673,8 @@ PUT|PATCH admin/popup-ads/{popup_ad} [admin.popup-ads.update] {web,auth,prevent-
 DELETE admin/popup-ads/{popup_ad} [admin.popup-ads.destroy] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/advertising-campaigns/reports [admin.advertising-campaigns.reports] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/advertising-campaigns/reports/export [admin.advertising-campaigns.reports.export] {web,auth,prevent-concurrent,role:admin|super_admin}
+GET|HEAD admin/advertising-campaigns/meta/{metaCampaign}/local-settings [admin.advertising-campaigns.meta.local-settings] {web,auth,prevent-concurrent,role:admin|super_admin}
+POST admin/advertising-campaigns/meta/{metaCampaign}/sync-leads [admin.advertising-campaigns.meta.sync-leads] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/advertising-campaigns/{advertising_campaign}/sync-meta-leads [admin.advertising-campaigns.sync-meta-leads] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/advertising-campaigns [admin.advertising-campaigns.index] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/advertising-campaigns/create [admin.advertising-campaigns.create] {web,auth,prevent-concurrent,role:admin|super_admin}

@@ -18,39 +18,122 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdvertisingCampaignController extends Controller
 {
-    public function index(Request $request)
+    public function index(MetaAdsGraphService $metaAds)
     {
-        $campaigns = AdvertisingCampaign::query()
-            ->withCount('salesEmployees')
-            ->with('salesEmployees:id,name')
-            ->orderByDesc('is_active')
-            ->orderByDesc('created_at')
-            ->paginate(15);
-
-        $service = app(CampaignReportService::class);
-        $aggregates = [];
-        foreach ($campaigns as $campaign) {
-            $aggregates[$campaign->id] = $service->aggregateForCampaign($campaign);
+        if (! MetaAdsSettings::hasAccessToken()) {
+            return redirect()
+                ->route('admin.meta-ads.settings')
+                ->with('error', 'اربط Meta من السوشيال ميديا أولاً لعرض الحملات.');
         }
 
+        if (! MetaAdsSettings::isReady()) {
+            return redirect()
+                ->route('admin.meta-ads.settings')
+                ->with('error', 'اختر حساب إعلانات (Ad Account) من إعدادات Meta Ads.');
+        }
+
+        $connection = $metaAds->connectionMeta();
+        $list = $metaAds->listCampaigns(100);
+        $campaigns = ($list['success'] ?? false) ? ($list['data'] ?? []) : [];
+        $error = ($list['success'] ?? false) ? null : ($list['error'] ?? 'تعذر جلب الحملات من ميتا');
+
+        $active = 0;
+        $paused = 0;
+        foreach ($campaigns as $c) {
+            $status = strtoupper((string) ($c['effective_status'] ?? $c['status'] ?? ''));
+            if ($status === 'ACTIVE') {
+                $active++;
+            } else {
+                $paused++;
+            }
+        }
+
+        $metaIds = collect($campaigns)->pluck('id')->filter()->map(fn ($id) => (string) $id)->all();
+        $linkedLocals = AdvertisingCampaign::query()
+            ->whereIn('meta_campaign_id', $metaIds)
+            ->withCount('salesEmployees')
+            ->get()
+            ->keyBy(fn (AdvertisingCampaign $row) => (string) $row->meta_campaign_id);
+
         $stats = [
-            'total' => AdvertisingCampaign::query()->count(),
-            'active' => AdvertisingCampaign::query()->where('is_active', true)->count(),
-            'inactive' => AdvertisingCampaign::query()->where('is_active', false)->count(),
-            'total_cost' => (float) AdvertisingCampaign::query()->sum('cost'),
+            'total' => count($campaigns),
+            'active' => $active,
+            'inactive' => $paused,
+            'total_cost' => (float) $linkedLocals->sum('cost'),
         ];
 
-        return view('marketing::admin.advertising-campaigns.index', compact('campaigns', 'aggregates', 'stats'));
+        return view('marketing::admin.advertising-campaigns.index', [
+            'campaigns' => $campaigns,
+            'linkedLocals' => $linkedLocals,
+            'connection' => $connection,
+            'error' => $error,
+            'stats' => $stats,
+            'metaAds' => $metaAds,
+        ]);
     }
 
-    public function create(MetaAdsGraphService $metaAds)
+    public function create()
     {
-        $salesReps = $this->salesReps();
-        [$metaCampaigns, $metaCampaignsError] = $this->metaCampaignOptions($metaAds);
+        return redirect()->route('admin.meta-ads.campaigns.create');
+    }
 
-        return view('marketing::admin.advertising-campaigns.create', compact(
-            'salesReps', 'metaCampaigns', 'metaCampaignsError'
-        ));
+    /**
+     * إعداد محلي (تكلفة / سيلز) لحملة Meta — ينشئ السجل المحلي إن لم يوجد.
+     */
+    public function localSettings(string $metaCampaign, MetaAdsGraphService $metaAds)
+    {
+        $metaCampaign = trim($metaCampaign);
+        abort_if($metaCampaign === '', 404);
+
+        $name = $metaCampaign;
+        $meta = $metaAds->getCampaign($metaCampaign);
+        if ($meta['success'] ?? false) {
+            $name = (string) ($meta['data']['name'] ?? $metaCampaign);
+        }
+
+        $local = AdvertisingCampaign::query()->firstOrCreate(
+            ['meta_campaign_id' => $metaCampaign],
+            [
+                'name' => $name,
+                'meta_campaign_name' => $name,
+                'platform' => 'facebook',
+                'cost' => 0,
+                'currency' => 'EGP',
+                'is_active' => true,
+                'created_by' => Auth::id(),
+            ]
+        );
+
+        if ($local->meta_campaign_name !== $name || $local->name === $metaCampaign) {
+            $local->fill([
+                'meta_campaign_name' => $name,
+                'name' => $local->wasRecentlyCreated || $local->name === $metaCampaign ? $name : $local->name,
+            ])->save();
+        }
+
+        return redirect()->route('admin.advertising-campaigns.edit', $local);
+    }
+
+    public function syncMetaCampaignLeads(
+        string $metaCampaign,
+        MetaCampaignLeadSyncService $sync,
+        MetaAdsGraphService $metaAds,
+    ): RedirectResponse {
+        $metaCampaign = trim($metaCampaign);
+        abort_if($metaCampaign === '', 404);
+
+        $name = null;
+        $meta = $metaAds->getCampaign($metaCampaign);
+        if ($meta['success'] ?? false) {
+            $name = (string) ($meta['data']['name'] ?? $metaCampaign);
+        }
+
+        $local = AdvertisingCampaign::query()->where('meta_campaign_id', $metaCampaign)->first();
+        $result = $sync->syncByMetaCampaignId($metaCampaign, $local, $name, Auth::id());
+
+        return redirect()
+            ->route('admin.advertising-campaigns.index')
+            ->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 
     public function store(Request $request)

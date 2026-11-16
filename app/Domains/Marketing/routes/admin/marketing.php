@@ -15,9 +15,15 @@ use Illuminate\Support\Facades\Route;
 Route::get('/personal-branding', [InstructorPersonalBrandingController::class, 'index'])->name('personal-branding.index');
 Route::resource('popup-ads', PopupAdController::class)->except(['show']);
 
-// الحملات الإعلانية + تقارير الكامبين من السيلز
+// الحملات الإعلانية (القائمة من Meta) + تقارير السيلز المحلية
 Route::get('advertising-campaigns/reports', [AdvertisingCampaignController::class, 'reports'])->name('advertising-campaigns.reports');
 Route::get('advertising-campaigns/reports/export', [AdvertisingCampaignController::class, 'reportsExport'])->name('advertising-campaigns.reports.export');
+Route::get('advertising-campaigns/meta/{metaCampaign}/local-settings', [AdvertisingCampaignController::class, 'localSettings'])
+    ->where('metaCampaign', '[0-9]+')
+    ->name('advertising-campaigns.meta.local-settings');
+Route::post('advertising-campaigns/meta/{metaCampaign}/sync-leads', [AdvertisingCampaignController::class, 'syncMetaCampaignLeads'])
+    ->where('metaCampaign', '[0-9]+')
+    ->name('advertising-campaigns.meta.sync-leads');
 Route::post('advertising-campaigns/{advertising_campaign}/sync-meta-leads', [AdvertisingCampaignController::class, 'syncMetaLeads'])
     ->name('advertising-campaigns.sync-meta-leads');
 Route::resource('advertising-campaigns', AdvertisingCampaignController::class)->except(['show']);
