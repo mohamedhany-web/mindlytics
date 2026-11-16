@@ -47,7 +47,7 @@ final class CrmFeatureCatalog
             ['key' => 'ops.shifts', 'label' => 'شيفتات / تقويم / Blocks', 'group' => 'ops', 'roles' => ['rep', 'manager', 'admin']],
             ['key' => 'ops.compliance', 'label' => 'تدقيق CRM', 'group' => 'ops', 'roles' => ['admin']],
             ['key' => 'ops.audit', 'label' => 'سجل الأنشطة', 'group' => 'ops', 'roles' => ['admin']],
-            ['key' => 'ops.course_board', 'label' => 'معلومات الكورسات / الدبلومات', 'group' => 'ops', 'roles' => ['rep', 'admin']],
+            ['key' => 'ops.course_board', 'label' => 'معلومات الكورسات / الدبلومات', 'group' => 'ops', 'roles' => ['rep', 'manager', 'admin']],
             ['key' => 'ops.whatsapp', 'label' => 'واتساب', 'group' => 'ops', 'roles' => ['rep', 'manager', 'admin']],
             ['key' => 'ops.meta', 'label' => 'Messenger / Instagram', 'group' => 'ops', 'roles' => ['rep', 'manager', 'admin']],
             ['key' => 'ops.meta_agents', 'label' => 'ربط موظفي Meta', 'group' => 'ops', 'roles' => ['admin']],
