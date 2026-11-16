@@ -28,6 +28,9 @@ Route::post('advertising-campaigns/meta/{metaCampaign}/sync-leads', [Advertising
 Route::get('advertising-campaigns/meta/{metaCampaign}/leads', [MetaCampaignLeadsController::class, 'index'])
     ->where('metaCampaign', '[0-9]+')
     ->name('advertising-campaigns.meta.leads');
+Route::get('advertising-campaigns/meta/{metaCampaign}/leads/status', [MetaCampaignLeadsController::class, 'status'])
+    ->where('metaCampaign', '[0-9]+')
+    ->name('advertising-campaigns.meta.leads.status');
 Route::get('advertising-campaigns/meta/{metaCampaign}/leads/export', [MetaCampaignLeadsController::class, 'export'])
     ->where('metaCampaign', '[0-9]+')
     ->name('advertising-campaigns.meta.leads.export');

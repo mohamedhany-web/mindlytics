@@ -61,8 +61,8 @@ class MessagingServiceProvider extends ServiceProvider
                 ->withoutOverlapping()
                 ->runInBackground();
 
-            // سحب ليدز Meta Ads وغيره من مهام الـ default queue
-            $schedule->command('queue:work --queue=default --stop-when-empty --max-time=55 --max-jobs=20')
+            // سحب ليدز Meta Ads — طابور مستقل عن whatsapp/default
+            $schedule->command('queue:work --queue=meta --stop-when-empty --max-time=55 --max-jobs=5')
                 ->everyMinute()
                 ->withoutOverlapping()
                 ->runInBackground();

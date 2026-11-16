@@ -36,11 +36,22 @@ class MetaCampaignLeadSyncDispatcher
             ->first();
 
         if ($active) {
-            return [
-                'success' => true,
-                'message' => 'سحب الليدز لهذه الحملة قيد التنفيذ بالفعل — تابع الحالة من صفحة ليدز الحملة.',
-                'run' => $active,
-            ];
+            $startedAt = $active->started_at ?: $active->created_at;
+            $stale = $startedAt && $startedAt->lt(now()->subMinutes(20));
+            if ($stale) {
+                $active->update([
+                    'status' => MetaCampaignLeadSyncRun::STATUS_FAILED,
+                    'error' => 'انتهت مهلة السحب السابق دون اكتمال.',
+                    'message' => 'تم اعتبار السحب السابق متوقفاً وإعادة الجدولة.',
+                    'finished_at' => now(),
+                ]);
+            } else {
+                return [
+                    'success' => true,
+                    'message' => 'سحب الليدز لهذه الحملة قيد التنفيذ بالفعل — تابع الحالة من صفحة ليدز الحملة.',
+                    'run' => $active,
+                ];
+            }
         }
 
         $local ??= AdvertisingCampaign::query()->where('meta_campaign_id', $metaCampaignId)->first();

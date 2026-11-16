@@ -31,16 +31,43 @@ class MetaCampaignLeadSyncService
      *   advertising_campaign_id?: int|null
      * }
      */
+    /**
+     * @param  null|callable(array{
+     *   phase?: string,
+     *   message?: string,
+     *   created?: int,
+     *   updated?: int,
+     *   skipped?: int,
+     *   conversations_linked?: int,
+     *   import_batch?: string
+     * }): void  $onProgress
+     */
     public function syncByMetaCampaignId(
         string $metaCampaignId,
         ?AdvertisingCampaign $advertisingCampaign = null,
         ?string $metaCampaignName = null,
         ?int $actorUserId = null,
+        ?callable $onProgress = null,
     ): array {
         $metaCampaignId = trim($metaCampaignId);
         if ($metaCampaignId === '') {
             return ['success' => false, 'message' => 'معرّف كامبين ميتا مطلوب.'];
         }
+
+        $report = function (string $phase, string $message, int $created = 0, int $updated = 0, int $skipped = 0, int $conversationsLinked = 0, ?string $importBatch = null) use ($onProgress): void {
+            if (! $onProgress) {
+                return;
+            }
+            $onProgress([
+                'phase' => $phase,
+                'message' => $message,
+                'created' => $created,
+                'updated' => $updated,
+                'skipped' => $skipped,
+                'conversations_linked' => $conversationsLinked,
+                'import_batch' => $importBatch,
+            ]);
+        };
 
         if ($advertisingCampaign === null) {
             $advertisingCampaign = AdvertisingCampaign::query()
@@ -55,6 +82,8 @@ class MetaCampaignLeadSyncService
             }
             $advertisingCampaign->save();
         }
+
+        $report('ads', 'جاري جلب إعلانات الحملة من ميتا…');
 
         $adsResult = $this->metaAds->listAdsForCampaign($metaCampaignId);
         if (! ($adsResult['success'] ?? false)) {
@@ -124,16 +153,20 @@ class MetaCampaignLeadSyncService
         $assigneeId = $this->defaultAssigneeId($advertisingCampaign, $actorUserId);
         $adIdLookup = array_fill_keys($adIds, true);
 
+        $conversationsLinked = 0;
+
         $ingestRows = function (array $rows) use (
             &$created,
             &$updated,
             &$skipped,
+            &$conversationsLinked,
             &$seenLeadgenIds,
             $metaCampaignId,
             $advertisingCampaign,
             $importBatch,
             $assigneeId,
             $actorUserId,
+            $report,
         ): int {
             $accepted = 0;
             foreach ($rows as $row) {
@@ -161,10 +194,24 @@ class MetaCampaignLeadSyncService
                     'updated' => $updated++,
                     default => $skipped++,
                 };
+
+                if (($created + $updated) % 5 === 0) {
+                    $report(
+                        'forms',
+                        "جاري حفظ ليدز الفورم… جديد {$created} · محدّث {$updated}",
+                        $created,
+                        $updated,
+                        $skipped,
+                        $conversationsLinked,
+                        $importBatch,
+                    );
+                }
             }
 
             return $accepted;
         };
+
+        $report('forms', 'جاري سحب ليدز الفورم من الإعلانات…', 0, 0, 0, 0, $importBatch);
 
         foreach ($adIds as $adId) {
             $adLeadAttempts++;
@@ -229,9 +276,55 @@ class MetaCampaignLeadSyncService
             }
         }
 
-        // مسار الرسائل: مزامنة Inbox + مطابقة إحالات الإعلان + تحويل المحادثات لليدز CRM
+        // مسار الرسائل: أولاً حوّل المحادثات الموجودة محلياً (تظهر أول بأول) ثم زامن Inbox
         $inboxSync = ['synced' => 0, 'messages' => 0];
         $referralBackfill = ['matched' => 0, 'scanned' => 0];
+        $campaignWindow = $this->campaignTimeWindow($metaCampaignId);
+        $useMessagingFallback = ! empty($capability['looks_like_messaging']) || ($adLeadHits === 0 && $formLeadHits === 0);
+
+        $conversationProgress = function (int $linked) use (
+            &$created,
+            &$updated,
+            &$skipped,
+            &$conversationsLinked,
+            $importBatch,
+            $report,
+        ): void {
+            $conversationsLinked = $linked;
+            $report(
+                'conversations',
+                "جاري تحويل المحادثات لليدز… {$linked} عميل",
+                $created,
+                $updated,
+                $skipped,
+                $linked,
+                $importBatch,
+            );
+        };
+
+        $report('conversations', 'جاري تحويل المحادثات المحلية الموجودة إلى ليدز…', $created, $updated, $skipped, 0, $importBatch);
+        $conversationsLinked = $this->syncAdConversations(
+            $metaCampaignId,
+            $adIds,
+            $advertisingCampaign,
+            $assigneeId,
+            $actorUserId,
+            $importBatch,
+            $useMessagingFallback,
+            $campaignWindow,
+            $conversationProgress,
+        );
+
+        $report(
+            'inbox',
+            "جاري مزامنة Inbox من ميتا… (ظهر حتى الآن {$conversationsLinked} من المحادثات)",
+            $created,
+            $updated,
+            $skipped,
+            $conversationsLinked,
+            $importBatch,
+        );
+
         try {
             $history = $this->inbox->syncHistoryFromMeta(null, 8);
             if ($history['success'] ?? false) {
@@ -246,13 +339,32 @@ class MetaCampaignLeadSyncService
             $errors[] = 'مزامنة Inbox: '.$e->getMessage();
         }
 
+        $report(
+            'referrals',
+            'جاري مطابقة إحالات الإعلانات…',
+            $created,
+            $updated,
+            $skipped,
+            $conversationsLinked,
+            $importBatch,
+        );
+
         try {
             $referralBackfill = $this->inbox->backfillAdReferralsForAds($adIds, $metaCampaignId);
         } catch (\Throwable $e) {
             Log::warning('Meta campaign referral backfill failed', ['error' => $e->getMessage()]);
         }
 
-        $campaignWindow = $this->campaignTimeWindow($metaCampaignId);
+        $report(
+            'conversations',
+            'جاري تحويل المحادثات الجديدة بعد المزامنة…',
+            $created,
+            $updated,
+            $skipped,
+            $conversationsLinked,
+            $importBatch,
+        );
+
         $conversationsLinked = $this->syncAdConversations(
             $metaCampaignId,
             $adIds,
@@ -260,8 +372,9 @@ class MetaCampaignLeadSyncService
             $assigneeId,
             $actorUserId,
             $importBatch,
-            ! empty($capability['looks_like_messaging']) || ($adLeadHits === 0 && $formLeadHits === 0),
+            $useMessagingFallback,
             $campaignWindow,
+            $conversationProgress,
         );
 
         if ($advertisingCampaign) {
@@ -484,6 +597,9 @@ class MetaCampaignLeadSyncService
      * @param  list<string>  $adIds
      * @param  array{from: ?\Carbon\Carbon, to: ?\Carbon\Carbon}  $campaignWindow
      */
+    /**
+     * @param  null|callable(int $linked): void  $onProgress
+     */
     private function syncAdConversations(
         string $metaCampaignId,
         array $adIds,
@@ -493,6 +609,7 @@ class MetaCampaignLeadSyncService
         string $importBatch,
         bool $includeMessagingWindowFallback = false,
         array $campaignWindow = ['from' => null, 'to' => null],
+        ?callable $onProgress = null,
     ): int {
         if (! Schema::hasTable('meta_social_conversations')
             || ! Schema::hasColumn('meta_social_conversations', 'meta_ad_id')) {
@@ -613,6 +730,14 @@ class MetaCampaignLeadSyncService
 
             $lead->fill($updates)->save();
             $linked++;
+
+            if ($onProgress && ($linked === 1 || $linked % 3 === 0)) {
+                $onProgress($linked);
+            }
+        }
+
+        if ($onProgress && $linked > 0) {
+            $onProgress($linked);
         }
 
         return $linked;

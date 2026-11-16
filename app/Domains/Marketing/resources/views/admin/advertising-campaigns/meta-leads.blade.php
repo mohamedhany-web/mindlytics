@@ -57,19 +57,19 @@
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
             <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <p class="text-[11px] text-slate-500 font-semibold">إجمالي الليدز</p>
-                <p class="text-2xl font-black text-slate-900 mt-1">{{ number_format($stats['total']) }}</p>
+                <p class="text-2xl font-black text-slate-900 mt-1" data-stat-total>{{ number_format($stats['total']) }}</p>
             </div>
             <div class="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3">
                 <p class="text-[11px] text-teal-700 font-semibold">Lead Forms</p>
-                <p class="text-2xl font-black text-teal-900 mt-1">{{ number_format($stats['forms']) }}</p>
+                <p class="text-2xl font-black text-teal-900 mt-1" data-stat-forms>{{ number_format($stats['forms']) }}</p>
             </div>
             <div class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
                 <p class="text-[11px] text-sky-700 font-semibold">محادثات إعلان</p>
-                <p class="text-2xl font-black text-sky-900 mt-1">{{ number_format($stats['inbox']) }}</p>
+                <p class="text-2xl font-black text-sky-900 mt-1" data-stat-inbox>{{ number_format($stats['inbox']) }}</p>
             </div>
             <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                 <p class="text-[11px] text-amber-700 font-semibold">بدون إسناد</p>
-                <p class="text-2xl font-black text-amber-900 mt-1">{{ number_format($stats['unassigned']) }}</p>
+                <p class="text-2xl font-black text-amber-900 mt-1" data-stat-unassigned>{{ number_format($stats['unassigned']) }}</p>
             </div>
         </div>
     </div>
@@ -88,24 +88,84 @@
                     {{ $latestRun->statusLabel() }}
                 </span>
             </div>
-            <p class="text-sm text-slate-700 mt-3 leading-relaxed">{{ $latestRun->message ?: ($latestRun->error ?: '—') }}</p>
+            <p id="sync-run-message" class="text-sm text-slate-700 mt-3 leading-relaxed">{{ $latestRun->message ?: ($latestRun->error ?: '—') }}</p>
             <div class="mt-3 flex flex-wrap gap-3 text-xs text-slate-600">
-                <span>جديد: <strong>{{ $latestRun->created_count }}</strong></span>
-                <span>محدّث: <strong>{{ $latestRun->updated_count }}</strong></span>
-                <span>محادثات: <strong>{{ $latestRun->conversations_linked }}</strong></span>
-                <span>تخطي: <strong>{{ $latestRun->skipped_count }}</strong></span>
+                <span>جديد: <strong data-run-created>{{ $latestRun->created_count }}</strong></span>
+                <span>محدّث: <strong data-run-updated>{{ $latestRun->updated_count }}</strong></span>
+                <span>محادثات: <strong data-run-conversations>{{ $latestRun->conversations_linked }}</strong></span>
+                <span>تخطي: <strong data-run-skipped>{{ $latestRun->skipped_count }}</strong></span>
                 @if($latestRun->import_batch)
                     <span class="font-mono" dir="ltr">batch: {{ $latestRun->import_batch }}</span>
                 @endif
             </div>
             @if(in_array($latestRun->status, ['queued', 'running'], true))
-                <p class="mt-3 text-xs text-amber-700 font-semibold">
+                <p class="mt-3 text-xs text-amber-700 font-semibold" id="sync-live-hint">
                     <i class="fas fa-spinner fa-spin ml-1"></i>
-                    السحب ما زال شغال في الخلفية — حدّث الصفحة بعد قليل.
+                    السحب شغال — الليدز هتظهر أول بأول هنا تلقائياً.
                 </p>
-                <script>setTimeout(function () { window.location.reload(); }, 12000);</script>
+                <div id="sync-live-leads" class="mt-3 space-y-1 text-xs text-slate-600"></div>
             @endif
         </div>
+    @endif
+
+    @if($latestRun && in_array($latestRun->status, ['queued', 'running'], true))
+        <script>
+            (function () {
+                const statusUrl = @json(route('admin.advertising-campaigns.meta.leads.status', $metaCampaignId));
+                let lastTotal = {{ (int) $stats['total'] }};
+                const msgEl = document.querySelector('[data-sync-message]') || null;
+                const hint = document.getElementById('sync-live-hint');
+                const liveBox = document.getElementById('sync-live-leads');
+
+                function setText(sel, text) {
+                    document.querySelectorAll(sel).forEach(function (el) { el.textContent = text; });
+                }
+
+                async function tick() {
+                    try {
+                        const res = await fetch(statusUrl, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+                        if (!res.ok) return;
+                        const data = await res.json();
+                        if (data.stats) {
+                            setText('[data-stat-total]', Number(data.stats.total || 0).toLocaleString('en-US'));
+                            setText('[data-stat-forms]', Number(data.stats.forms || 0).toLocaleString('en-US'));
+                            setText('[data-stat-inbox]', Number(data.stats.inbox || 0).toLocaleString('en-US'));
+                            setText('[data-stat-unassigned]', Number(data.stats.unassigned || 0).toLocaleString('en-US'));
+                        }
+                        if (data.run) {
+                            setText('[data-run-created]', data.run.created_count);
+                            setText('[data-run-updated]', data.run.updated_count);
+                            setText('[data-run-conversations]', data.run.conversations_linked);
+                            setText('[data-run-skipped]', data.run.skipped_count);
+                            const messageNode = document.getElementById('sync-run-message');
+                            if (messageNode && data.run.message) messageNode.textContent = data.run.message;
+                            if (liveBox && Array.isArray(data.latest_leads)) {
+                                liveBox.innerHTML = data.latest_leads.map(function (l) {
+                                    return '<div class="flex justify-between gap-2 border border-slate-100 rounded-lg px-2 py-1 bg-slate-50">'
+                                        + '<span class="font-semibold text-slate-800">' + (l.name || '—') + '</span>'
+                                        + '<span class="font-mono" dir="ltr">' + (l.phone || '') + '</span>'
+                                        + '<span class="text-slate-400">' + (l.created_at || '') + '</span>'
+                                        + '</div>';
+                                }).join('');
+                            }
+                            if (!data.run.is_active) {
+                                if (hint) hint.innerHTML = '<i class="fas fa-check-circle ml-1"></i> اكتمل السحب — جاري تحديث الصفحة…';
+                                setTimeout(function () { window.location.reload(); }, 1200);
+                                return;
+                            }
+                        }
+                        if (data.stats && Number(data.stats.total) !== lastTotal) {
+                            lastTotal = Number(data.stats.total);
+                            // لما يظهر ليد جديد نحدّث الجدول بالكامل
+                            setTimeout(function () { window.location.reload(); }, 800);
+                            return;
+                        }
+                    } catch (e) {}
+                    setTimeout(tick, 3000);
+                }
+                setTimeout(tick, 2500);
+            })();
+        </script>
     @endif
 
     <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-5">

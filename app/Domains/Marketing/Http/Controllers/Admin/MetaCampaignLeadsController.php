@@ -8,6 +8,7 @@ use App\Domains\Messaging\Models\MetaCampaignLeadSyncRun;
 use App\Domains\Messaging\Services\MetaAdsGraphService;
 use App\Domains\Sales\Models\SalesLead;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -82,6 +83,68 @@ class MetaCampaignLeadsController extends Controller
                 'source_type' => (string) $request->input('source_type', ''),
                 'import_batch' => (string) $request->input('import_batch', ''),
             ],
+        ]);
+    }
+
+    public function status(string $metaCampaign): JsonResponse
+    {
+        $metaCampaign = trim($metaCampaign);
+        abort_if($metaCampaign === '', 404);
+
+        $local = AdvertisingCampaign::query()->where('meta_campaign_id', $metaCampaign)->first();
+        $statsBase = SalesLead::query()->where(function ($q) use ($metaCampaign, $local) {
+            $q->where('meta_campaign_id', $metaCampaign);
+            if ($local) {
+                $q->orWhere('advertising_campaign_id', $local->id);
+            }
+        });
+
+        $latestRun = MetaCampaignLeadSyncRun::query()
+            ->where('meta_campaign_id', $metaCampaign)
+            ->latest('id')
+            ->first();
+
+        $latestLeads = (clone $statsBase)
+            ->orderByDesc('id')
+            ->limit(8)
+            ->get(['id', 'name', 'phone', 'meta_leadgen_id', 'created_at'])
+            ->map(fn (SalesLead $l) => [
+                'id' => $l->id,
+                'name' => $l->name,
+                'phone' => $l->phone,
+                'type' => filled($l->meta_leadgen_id) ? 'form' : 'inbox',
+                'created_at' => optional($l->created_at)?->timezone(config('app.timezone'))->format('H:i:s'),
+            ])
+            ->values();
+
+        return response()->json([
+            'stats' => [
+                'total' => (clone $statsBase)->count(),
+                'forms' => (clone $statsBase)->whereNotNull('meta_leadgen_id')->count(),
+                'inbox' => (clone $statsBase)->whereNull('meta_leadgen_id')->count(),
+                'unassigned' => (clone $statsBase)->where(function ($q) {
+                    $q->whereNull('assigned_to')->orWhere('assigned_to', 0);
+                })->count(),
+            ],
+            'run' => $latestRun ? [
+                'id' => $latestRun->id,
+                'status' => $latestRun->status,
+                'status_label' => $latestRun->statusLabel(),
+                'status_class' => $latestRun->statusBadgeClass(),
+                'message' => $latestRun->message,
+                'error' => $latestRun->error,
+                'created_count' => (int) $latestRun->created_count,
+                'updated_count' => (int) $latestRun->updated_count,
+                'conversations_linked' => (int) $latestRun->conversations_linked,
+                'skipped_count' => (int) $latestRun->skipped_count,
+                'import_batch' => $latestRun->import_batch,
+                'phase' => data_get($latestRun->diagnostics, 'phase'),
+                'is_active' => in_array($latestRun->status, [
+                    MetaCampaignLeadSyncRun::STATUS_QUEUED,
+                    MetaCampaignLeadSyncRun::STATUS_RUNNING,
+                ], true),
+            ] : null,
+            'latest_leads' => $latestLeads,
         ]);
     }
 
