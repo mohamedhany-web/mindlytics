@@ -39,6 +39,8 @@ class MetaSocialConversation extends Model
         'status',
         'assigned_to',
         'sales_lead_id',
+        'meta_campaign_id',
+        'meta_ad_id',
         'meta',
     ];
 

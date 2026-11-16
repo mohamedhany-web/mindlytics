@@ -1673,6 +1673,7 @@ PUT|PATCH admin/popup-ads/{popup_ad} [admin.popup-ads.update] {web,auth,prevent-
 DELETE admin/popup-ads/{popup_ad} [admin.popup-ads.destroy] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/advertising-campaigns/reports [admin.advertising-campaigns.reports] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/advertising-campaigns/reports/export [admin.advertising-campaigns.reports.export] {web,auth,prevent-concurrent,role:admin|super_admin}
+POST admin/advertising-campaigns/{advertising_campaign}/sync-meta-leads [admin.advertising-campaigns.sync-meta-leads] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/advertising-campaigns [admin.advertising-campaigns.index] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/advertising-campaigns/create [admin.advertising-campaigns.create] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/advertising-campaigns [admin.advertising-campaigns.store] {web,auth,prevent-concurrent,role:admin|super_admin}
@@ -1690,6 +1691,7 @@ GET|HEAD admin/meta-ads/campaigns [admin.meta-ads.campaigns.index] {web,auth,pre
 GET|HEAD admin/meta-ads/campaigns/create [admin.meta-ads.campaigns.create] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/meta-ads/campaigns [admin.meta-ads.campaigns.store] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/meta-ads/campaigns/{campaign} [admin.meta-ads.campaigns.show] {web,auth,prevent-concurrent,role:admin|super_admin}
+POST admin/meta-ads/campaigns/{campaign}/sync-leads [admin.meta-ads.campaigns.sync-leads] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/meta-ads/campaigns/{campaign}/pause [admin.meta-ads.campaigns.pause] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/meta-ads/campaigns/{campaign}/resume [admin.meta-ads.campaigns.resume] {web,auth,prevent-concurrent,role:admin|super_admin}
 PUT admin/meta-ads/campaigns/{campaign}/budget [admin.meta-ads.campaigns.budget] {web,auth,prevent-concurrent,role:admin|super_admin}

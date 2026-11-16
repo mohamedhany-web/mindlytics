@@ -544,7 +544,33 @@ class MetaSocialInboxService
         }
 
         $messagePayload = $messagingEvent['message'] ?? null;
-        if (! is_array($messagePayload)) {
+        $hasMessage = is_array($messagePayload);
+        $referral = null;
+        if (is_array($messagingEvent['referral'] ?? null)) {
+            $referral = $messagingEvent['referral'];
+        } elseif ($hasMessage && is_array($messagePayload['referral'] ?? null)) {
+            $referral = $messagePayload['referral'];
+        }
+
+        // إحالة إعلان بدون رسالة نصية — نحفظ الربط فقط
+        if (! $hasMessage) {
+            if ($referral) {
+                $conversation = MetaSocialConversation::query()->firstOrCreate(
+                    [
+                        'meta_social_page_id' => $page->id,
+                        'platform' => $platform,
+                        'participant_id' => $senderId,
+                    ],
+                    [
+                        'participant_name' => null,
+                        'status' => MetaSocialConversation::STATUS_OPEN,
+                    ],
+                );
+                $this->applyAdReferral($conversation, $referral);
+
+                return null;
+            }
+
             return null;
         }
 
@@ -564,6 +590,10 @@ class MetaSocialInboxService
                 'status' => MetaSocialConversation::STATUS_OPEN,
             ],
         );
+
+        if ($referral) {
+            $this->applyAdReferral($conversation, $referral);
+        }
 
         if (! $conversation->participant_name && $this->crm->crmReady()) {
             $this->crm->enrichParticipantProfile($conversation);
@@ -618,6 +648,49 @@ class MetaSocialInboxService
         MetaSocialContactCaptureService::bumpInboxVersion();
 
         return $message;
+    }
+
+    /**
+     * حفظ معرّف الإعلان/الحملة من messaging_referrals (ADS).
+     *
+     * @param  array<string, mixed>  $referral
+     */
+    public function applyAdReferral(MetaSocialConversation $conversation, array $referral): void
+    {
+        $source = strtoupper((string) ($referral['source'] ?? ''));
+        $adId = (string) ($referral['ad_id'] ?? $referral['ads_context_data']['ad_id'] ?? '');
+        $campaignId = (string) (
+            $referral['campaign_id']
+            ?? $referral['ads_context_data']['campaign_id']
+            ?? ''
+        );
+
+        if ($adId === '' && $campaignId === '' && $source !== 'ADS') {
+            return;
+        }
+
+        $updates = [];
+        if ($adId !== '' && Schema::hasColumn('meta_social_conversations', 'meta_ad_id')) {
+            $updates['meta_ad_id'] = $adId;
+        }
+        if ($campaignId !== '' && Schema::hasColumn('meta_social_conversations', 'meta_campaign_id')) {
+            $updates['meta_campaign_id'] = $campaignId;
+        }
+
+        $meta = is_array($conversation->meta) ? $conversation->meta : [];
+        $meta['ad_referral'] = [
+            'source' => $referral['source'] ?? null,
+            'type' => $referral['type'] ?? null,
+            'ad_id' => $adId !== '' ? $adId : null,
+            'campaign_id' => $campaignId !== '' ? $campaignId : null,
+            'ref' => $referral['ref'] ?? null,
+            'captured_at' => now()->toIso8601String(),
+        ];
+        $updates['meta'] = $meta;
+
+        if ($updates !== []) {
+            $conversation->fill($updates)->save();
+        }
     }
 
     /**

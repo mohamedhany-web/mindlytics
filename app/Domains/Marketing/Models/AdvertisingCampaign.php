@@ -20,6 +20,9 @@ class AdvertisingCampaign extends Model
         'end_date',
         'is_active',
         'notes',
+        'meta_campaign_id',
+        'meta_campaign_name',
+        'meta_leads_synced_at',
         'created_by',
     ];
 
@@ -28,6 +31,7 @@ class AdvertisingCampaign extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'is_active' => 'boolean',
+        'meta_leads_synced_at' => 'datetime',
     ];
 
     /**

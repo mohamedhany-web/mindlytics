@@ -42,6 +42,7 @@ class MetaSocialSettings
             'business_management',
             'ads_management',
             'ads_read',
+            'leads_retrieval',
         ];
     }
 
@@ -210,7 +211,7 @@ class MetaSocialSettings
             explode(',', $scopes)
         ), static fn ($s) => $s !== '')));
 
-        foreach (['ads_management', 'ads_read'] as $needed) {
+        foreach (['ads_management', 'ads_read', 'leads_retrieval'] as $needed) {
             if (! in_array($needed, $list, true)) {
                 $list[] = $needed;
             }

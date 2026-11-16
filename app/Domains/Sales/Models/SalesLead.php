@@ -151,6 +151,7 @@ class SalesLead extends Model
         'call' => 'مكالمة واردة',
         'social' => 'وسائل التواصل',
         'whatsapp' => 'واتساب',
+        'meta_ads' => 'إعلانات ميتا',
         'event' => 'فعالية',
         'other' => 'أخرى',
     ];
@@ -194,6 +195,10 @@ class SalesLead extends Model
         'category_id',
         'sales_lead_group_id',
         'import_batch',
+        'meta_leadgen_id',
+        'meta_campaign_id',
+        'meta_ad_id',
+        'advertising_campaign_id',
         'name',
         'phone',
         'email',

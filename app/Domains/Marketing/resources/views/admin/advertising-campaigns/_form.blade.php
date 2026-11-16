@@ -1,9 +1,12 @@
 @php
     $campaign = $campaign ?? null;
     $assigned = $assigned ?? [];
+    $metaCampaigns = $metaCampaigns ?? [];
+    $metaCampaignsError = $metaCampaignsError ?? null;
     $platforms = \App\Domains\Marketing\Models\AdvertisingCampaign::platforms();
     $input = 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-sm';
     $label = 'block text-sm font-medium text-gray-700 mb-2';
+    $selectedMetaCampaignId = old('meta_campaign_id', $campaign->meta_campaign_id ?? '');
 @endphp
 
 @if($errors->any())
@@ -95,6 +98,50 @@
             <input type="date" name="end_date" value="{{ old('end_date', optional($campaign->end_date ?? null)->format('Y-m-d')) }}"
                    class="{{ $input }}">
             @error('end_date')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+        </div>
+    </div>
+</div>
+
+{{-- ربط Meta + سحب الليدز --}}
+<div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 bg-gray-50/80 flex items-center gap-3">
+        <span class="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center">
+            <i class="fab fa-meta"></i>
+        </span>
+        <div>
+            <h2 class="text-base font-bold text-gray-900">كامبين ميتا وسحب الليدز</h2>
+            <p class="text-xs text-gray-500">اربط الحملة بكامبين من Meta Ads ثم اسحب الليدز (Lead Ads + محادثات الإعلان)</p>
+        </div>
+    </div>
+    <div class="p-5 sm:p-6 space-y-4">
+        <div>
+            <label class="{{ $label }}">كامبين Meta</label>
+            <select name="meta_campaign_id" class="{{ $input }}">
+                <option value="">— بدون ربط —</option>
+                @foreach($metaCampaigns as $metaCamp)
+                    <option value="{{ $metaCamp['id'] }}" @selected((string) $selectedMetaCampaignId === (string) $metaCamp['id'])>
+                        {{ $metaCamp['name'] }}
+                        @if(!empty($metaCamp['status'])) ({{ $metaCamp['status'] }}) @endif
+                    </option>
+                @endforeach
+                @if($selectedMetaCampaignId && collect($metaCampaigns)->every(fn ($c) => (string) $c['id'] !== (string) $selectedMetaCampaignId))
+                    <option value="{{ $selectedMetaCampaignId }}" selected>
+                        {{ $campaign->meta_campaign_name ?? $selectedMetaCampaignId }} (محفوظ)
+                    </option>
+                @endif
+            </select>
+            @error('meta_campaign_id')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+            @if($metaCampaignsError)
+                <p class="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">{{ $metaCampaignsError }}</p>
+            @elseif(empty($metaCampaigns))
+                <p class="mt-2 text-xs text-slate-500">لا توجد حملات Meta حالياً — راجع إعدادات Meta Ads.</p>
+            @endif
+            @if(!empty($campaign?->meta_campaign_id))
+                <p class="mt-2 text-xs text-slate-500" dir="ltr">ID: {{ $campaign->meta_campaign_id }}</p>
+                @if($campaign->meta_leads_synced_at)
+                    <p class="mt-1 text-xs text-emerald-700">آخر سحب: {{ $campaign->meta_leads_synced_at->timezone(config('app.timezone'))->format('Y-m-d H:i') }}</p>
+                @endif
+            @endif
         </div>
     </div>
 </div>

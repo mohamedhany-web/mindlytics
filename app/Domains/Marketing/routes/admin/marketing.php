@@ -18,6 +18,8 @@ Route::resource('popup-ads', PopupAdController::class)->except(['show']);
 // الحملات الإعلانية + تقارير الكامبين من السيلز
 Route::get('advertising-campaigns/reports', [AdvertisingCampaignController::class, 'reports'])->name('advertising-campaigns.reports');
 Route::get('advertising-campaigns/reports/export', [AdvertisingCampaignController::class, 'reportsExport'])->name('advertising-campaigns.reports.export');
+Route::post('advertising-campaigns/{advertising_campaign}/sync-meta-leads', [AdvertisingCampaignController::class, 'syncMetaLeads'])
+    ->name('advertising-campaigns.sync-meta-leads');
 Route::resource('advertising-campaigns', AdvertisingCampaignController::class)->except(['show']);
 
 Route::get('marketing-web-analytics', [MarketingWebAnalyticsController::class, 'edit'])->name('marketing-web-analytics.settings');

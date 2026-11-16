@@ -284,6 +284,120 @@ class MetaAdsGraphService
     }
 
     /**
+     * Ads under a Meta campaign (for lead pull / referral matching).
+     *
+     * @return array{success: bool, data?: list<array<string, mixed>>, error?: string}
+     */
+    public function listAdsForCampaign(string $campaignId, int $limit = 100): array
+    {
+        $campaignId = trim($campaignId);
+        if ($campaignId === '') {
+            return ['success' => false, 'error' => 'معرّف الحملة مطلوب'];
+        }
+
+        return $this->paginateGet($campaignId.'/ads', [
+            'fields' => 'id,name,status,effective_status,adset_id,campaign_id,creative{id,name,object_story_spec,lead_gen_form_id}',
+            'limit' => max(1, min(100, $limit)),
+        ], 500);
+    }
+
+    /**
+     * Lead Ads submissions for a single ad.
+     *
+     * @return array{success: bool, data?: list<array<string, mixed>>, error?: string}
+     */
+    public function listLeadsForAd(string $adId, int $limit = 100): array
+    {
+        $adId = trim($adId);
+        if ($adId === '') {
+            return ['success' => false, 'error' => 'معرّف الإعلان مطلوب'];
+        }
+
+        return $this->paginateGet($adId.'/leads', [
+            'fields' => 'id,created_time,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,form_id,is_organic,field_data,custom_disclaimer_responses',
+            'limit' => max(1, min(100, $limit)),
+        ], 2000);
+    }
+
+    /**
+     * Lead Ads submissions for a leadgen form.
+     *
+     * @return array{success: bool, data?: list<array<string, mixed>>, error?: string}
+     */
+    public function listLeadsForForm(string $formId, int $limit = 100): array
+    {
+        $formId = trim($formId);
+        if ($formId === '') {
+            return ['success' => false, 'error' => 'معرّف الفورم مطلوب'];
+        }
+
+        return $this->paginateGet($formId.'/leads', [
+            'fields' => 'id,created_time,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,form_id,is_organic,field_data,custom_disclaimer_responses',
+            'limit' => max(1, min(100, $limit)),
+        ], 2000);
+    }
+
+    /**
+     * @param  array<string, mixed>  $query
+     * @return array{success: bool, data?: list<array<string, mixed>>, error?: string}
+     */
+    protected function paginateGet(string $path, array $query, int $maxItems = 500): array
+    {
+        $rows = [];
+        $nextUrl = null;
+        $pages = 0;
+
+        do {
+            $pages++;
+            if ($nextUrl) {
+                $token = MetaAdsSettings::accessToken();
+                if ($token === '') {
+                    return ['success' => false, 'error' => 'Access Token مفقود'];
+                }
+                try {
+                    $response = Http::timeout(45)->get($nextUrl);
+                    $json = $response->json();
+                    if (! is_array($json) || ! $response->successful() || isset($json['error'])) {
+                        $error = $this->graphErrorMessage(is_array($json) ? $json : [], 'طلب Meta فشل');
+
+                        return $rows === []
+                            ? ['success' => false, 'error' => $error]
+                            : ['success' => true, 'data' => $rows, 'error' => $error];
+                    }
+                    $pageData = $json;
+                } catch (\Throwable $e) {
+                    return $rows === []
+                        ? ['success' => false, 'error' => $e->getMessage()]
+                        : ['success' => true, 'data' => $rows, 'error' => $e->getMessage()];
+                }
+            } else {
+                $result = $this->get($path, $query);
+                if (! ($result['success'] ?? false)) {
+                    return $result;
+                }
+                $pageData = $result['data'] ?? [];
+            }
+
+            foreach (($pageData['data'] ?? []) as $row) {
+                if (is_array($row)) {
+                    $rows[] = $row;
+                    if (count($rows) >= $maxItems) {
+                        return ['success' => true, 'data' => $rows];
+                    }
+                }
+            }
+
+            $nextUrl = null;
+            $pagingNext = $pageData['paging']['next'] ?? null;
+            if (is_string($pagingNext) && $pagingNext !== '') {
+                $nextUrl = $pagingNext;
+            }
+        } while ($nextUrl && $pages < 50);
+
+        return ['success' => true, 'data' => $rows];
+    }
+
+    /**
      * Create a campaign + one ad set with simplified targeting.
      *
      * @param  array{

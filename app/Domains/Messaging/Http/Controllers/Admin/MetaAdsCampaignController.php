@@ -3,10 +3,13 @@
 namespace App\Domains\Messaging\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Domains\Marketing\Models\AdvertisingCampaign;
 use App\Domains\Messaging\Services\MetaAdsGraphService;
+use App\Domains\Messaging\Services\MetaCampaignLeadSyncService;
 use App\Domains\Messaging\Support\MetaAdsSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class MetaAdsCampaignController extends Controller
@@ -124,11 +127,42 @@ class MetaAdsCampaignController extends Controller
                 ->with('error', $result['error'] ?? 'الحملة غير موجودة');
         }
 
+        $campaignData = $result['data'];
+        $linkedAdvertising = AdvertisingCampaign::query()
+            ->where('meta_campaign_id', (string) ($campaignData['id'] ?? ''))
+            ->first();
+
         return view('messaging::admin.meta-ads.campaigns.show', [
-            'campaign' => $result['data'],
+            'campaign' => $campaignData,
             'metaAds' => $metaAds,
             'currency' => MetaAdsSettings::defaultCurrency(),
+            'linkedAdvertising' => $linkedAdvertising,
         ]);
+    }
+
+    public function syncLeads(string $campaign, MetaCampaignLeadSyncService $sync, MetaAdsGraphService $metaAds): RedirectResponse
+    {
+        if (! MetaAdsSettings::isReady()) {
+            return redirect()->route('admin.meta-ads.settings');
+        }
+
+        $campaignMeta = $metaAds->getCampaign($campaign);
+        $name = ($campaignMeta['success'] ?? false)
+            ? (string) ($campaignMeta['data']['name'] ?? $campaign)
+            : $campaign;
+
+        $linked = AdvertisingCampaign::query()->where('meta_campaign_id', $campaign)->first();
+
+        $result = $sync->syncByMetaCampaignId(
+            $campaign,
+            $linked,
+            $name,
+            Auth::id(),
+        );
+
+        return redirect()
+            ->route('admin.meta-ads.campaigns.show', $campaign)
+            ->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 
     public function pause(string $campaign, MetaAdsGraphService $metaAds): RedirectResponse

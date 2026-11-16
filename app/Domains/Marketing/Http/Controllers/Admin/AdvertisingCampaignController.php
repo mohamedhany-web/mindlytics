@@ -5,9 +5,13 @@ namespace App\Domains\Marketing\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Domains\Marketing\Models\AdvertisingCampaign;
 use App\Domains\Marketing\Models\CampaignDailyReport;
-use App\Models\User;
 use App\Domains\Marketing\Services\CampaignReportService;
+use App\Domains\Messaging\Services\MetaAdsGraphService;
+use App\Domains\Messaging\Services\MetaCampaignLeadSyncService;
+use App\Domains\Messaging\Support\MetaAdsSettings;
+use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -39,16 +43,20 @@ class AdvertisingCampaignController extends Controller
         return view('marketing::admin.advertising-campaigns.index', compact('campaigns', 'aggregates', 'stats'));
     }
 
-    public function create()
+    public function create(MetaAdsGraphService $metaAds)
     {
         $salesReps = $this->salesReps();
+        [$metaCampaigns, $metaCampaignsError] = $this->metaCampaignOptions($metaAds);
 
-        return view('marketing::admin.advertising-campaigns.create', compact('salesReps'));
+        return view('marketing::admin.advertising-campaigns.create', compact(
+            'salesReps', 'metaCampaigns', 'metaCampaignsError'
+        ));
     }
 
     public function store(Request $request)
     {
         $validated = $this->validateCampaign($request);
+        [$metaCampaignId, $metaCampaignName] = $this->resolveMetaCampaignLink($validated);
 
         $campaign = AdvertisingCampaign::create([
             'name' => $validated['name'],
@@ -60,30 +68,36 @@ class AdvertisingCampaignController extends Controller
             'end_date' => $validated['end_date'] ?? null,
             'is_active' => $request->boolean('is_active', true),
             'notes' => $validated['notes'] ?? null,
+            'meta_campaign_id' => $metaCampaignId,
+            'meta_campaign_name' => $metaCampaignName,
             'created_by' => Auth::id(),
         ]);
 
         $campaign->salesEmployees()->sync($this->validSalesRepIds($request));
 
-        return redirect()->route('admin.advertising-campaigns.index')
+        return redirect()->route('admin.advertising-campaigns.edit', $campaign)
             ->with('success', 'تم إنشاء الحملة الإعلانية بنجاح.');
     }
 
-    public function edit(AdvertisingCampaign $advertisingCampaign)
+    public function edit(AdvertisingCampaign $advertisingCampaign, MetaAdsGraphService $metaAds)
     {
         $salesReps = $this->salesReps();
         $assigned = $advertisingCampaign->salesEmployees()->pluck('users.id')->all();
+        [$metaCampaigns, $metaCampaignsError] = $this->metaCampaignOptions($metaAds);
 
         return view('marketing::admin.advertising-campaigns.edit', [
             'campaign' => $advertisingCampaign,
             'salesReps' => $salesReps,
             'assigned' => $assigned,
+            'metaCampaigns' => $metaCampaigns,
+            'metaCampaignsError' => $metaCampaignsError,
         ]);
     }
 
     public function update(Request $request, AdvertisingCampaign $advertisingCampaign)
     {
         $validated = $this->validateCampaign($request);
+        [$metaCampaignId, $metaCampaignName] = $this->resolveMetaCampaignLink($validated);
 
         $advertisingCampaign->update([
             'name' => $validated['name'],
@@ -95,12 +109,37 @@ class AdvertisingCampaignController extends Controller
             'end_date' => $validated['end_date'] ?? null,
             'is_active' => $request->boolean('is_active', true),
             'notes' => $validated['notes'] ?? null,
+            'meta_campaign_id' => $metaCampaignId,
+            'meta_campaign_name' => $metaCampaignName,
         ]);
 
         $advertisingCampaign->salesEmployees()->sync($this->validSalesRepIds($request));
 
-        return redirect()->route('admin.advertising-campaigns.index')
+        return redirect()->route('admin.advertising-campaigns.edit', $advertisingCampaign)
             ->with('success', 'تم تحديث الحملة الإعلانية بنجاح.');
+    }
+
+    public function syncMetaLeads(
+        AdvertisingCampaign $advertisingCampaign,
+        MetaCampaignLeadSyncService $sync,
+    ): RedirectResponse {
+        $metaCampaignId = trim((string) ($advertisingCampaign->meta_campaign_id ?? ''));
+        if ($metaCampaignId === '') {
+            return redirect()
+                ->route('admin.advertising-campaigns.edit', $advertisingCampaign)
+                ->with('error', 'اربط الحملة بكامبين Meta أولاً ثم اسحب الليدز.');
+        }
+
+        $result = $sync->syncByMetaCampaignId(
+            $metaCampaignId,
+            $advertisingCampaign,
+            $advertisingCampaign->meta_campaign_name,
+            Auth::id(),
+        );
+
+        return redirect()
+            ->route('admin.advertising-campaigns.edit', $advertisingCampaign)
+            ->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 
     public function destroy(AdvertisingCampaign $advertisingCampaign)
@@ -282,8 +321,65 @@ class AdvertisingCampaignController extends Controller
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'is_active' => 'boolean',
             'notes' => 'nullable|string|max:5000',
+            'meta_campaign_id' => 'nullable|string|max:64',
             'sales_reps' => 'nullable|array',
             'sales_reps.*' => 'integer',
         ]);
+    }
+
+    /**
+     * @return array{0: list<array{id: string, name: string, status?: string}>, 1: ?string}
+     */
+    private function metaCampaignOptions(MetaAdsGraphService $metaAds): array
+    {
+        if (! MetaAdsSettings::hasAccessToken() || ! MetaAdsSettings::isReady()) {
+            return [[], 'اربط Meta واختر Ad Account من إعدادات Meta Ads لعرض الحملات.'];
+        }
+
+        $list = $metaAds->listCampaigns(100);
+        if (! ($list['success'] ?? false)) {
+            return [[], (string) ($list['error'] ?? 'تعذر جلب حملات Meta')];
+        }
+
+        $options = [];
+        foreach (($list['data'] ?? []) as $row) {
+            if (! is_array($row) || blank($row['id'] ?? null)) {
+                continue;
+            }
+            $options[] = [
+                'id' => (string) $row['id'],
+                'name' => (string) ($row['name'] ?? $row['id']),
+                'status' => (string) ($row['effective_status'] ?? $row['status'] ?? ''),
+            ];
+        }
+
+        return [$options, null];
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function resolveMetaCampaignLink(array $validated): array
+    {
+        $metaCampaignId = trim((string) ($validated['meta_campaign_id'] ?? ''));
+        if ($metaCampaignId === '') {
+            return [null, null];
+        }
+
+        $name = null;
+        if (MetaAdsSettings::isReady()) {
+            $list = app(MetaAdsGraphService::class)->listCampaigns(100);
+            if ($list['success'] ?? false) {
+                foreach (($list['data'] ?? []) as $row) {
+                    if ((string) ($row['id'] ?? '') === $metaCampaignId) {
+                        $name = (string) ($row['name'] ?? $metaCampaignId);
+                        break;
+                    }
+                }
+            }
+        }
+
+        return [$metaCampaignId, $name];
     }
 }

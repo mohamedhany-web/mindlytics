@@ -19,6 +19,7 @@ Route::prefix('meta-ads')->name('meta-ads.')->group(function () {
     Route::get('campaigns/create', [MetaAdsCampaignController::class, 'create'])->name('campaigns.create');
     Route::post('campaigns', [MetaAdsCampaignController::class, 'store'])->name('campaigns.store');
     Route::get('campaigns/{campaign}', [MetaAdsCampaignController::class, 'show'])->name('campaigns.show');
+    Route::post('campaigns/{campaign}/sync-leads', [MetaAdsCampaignController::class, 'syncLeads'])->name('campaigns.sync-leads');
     Route::post('campaigns/{campaign}/pause', [MetaAdsCampaignController::class, 'pause'])->name('campaigns.pause');
     Route::post('campaigns/{campaign}/resume', [MetaAdsCampaignController::class, 'resume'])->name('campaigns.resume');
     Route::put('campaigns/{campaign}/budget', [MetaAdsCampaignController::class, 'updateBudget'])->name('campaigns.budget');

@@ -5,6 +5,13 @@
 
 @section('content')
 <div class="space-y-6 max-w-5xl mx-auto">
+    @if(session('success'))
+        <div class="rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 px-4 py-3 text-sm font-medium">{{ session('success') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="rounded-xl bg-rose-50 border border-rose-200 text-rose-900 px-4 py-3 text-sm font-medium">{{ session('error') }}</div>
+    @endif
+
     <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -17,6 +24,16 @@
                 <p class="text-gray-600 mt-1">حدّث تفاصيل الحملة أو موظفي السيلز المسؤولين.</p>
             </div>
             <div class="flex flex-wrap gap-2">
+                @if($campaign->meta_campaign_id)
+                    <form method="POST" action="{{ route('admin.advertising-campaigns.sync-meta-leads', $campaign) }}"
+                          onsubmit="return confirm('سحب كل ليدز كامبين ميتا المرتبط إلى الـ CRM؟')">
+                        @csrf
+                        <button type="submit"
+                                class="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-medium">
+                            <i class="fas fa-cloud-download-alt"></i> سحب ليدز ميتا
+                        </button>
+                    </form>
+                @endif
                 <a href="{{ route('admin.advertising-campaigns.reports', ['campaign_id' => $campaign->id]) }}"
                    class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg font-medium border border-indigo-100">
                     <i class="fas fa-chart-column"></i> تقارير هذه الحملة
@@ -32,7 +49,10 @@
     <form action="{{ route('admin.advertising-campaigns.update', $campaign) }}" method="POST" class="space-y-6">
         @csrf
         @method('PUT')
-        @include('marketing::admin.advertising-campaigns._form')
+        @include('marketing::admin.advertising-campaigns._form', [
+            'metaCampaigns' => $metaCampaigns ?? [],
+            'metaCampaignsError' => $metaCampaignsError ?? null,
+        ])
 
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 px-5 py-4 flex flex-wrap items-center gap-3">
             <button type="submit"

@@ -25,7 +25,11 @@
 
     <form action="{{ route('admin.advertising-campaigns.store') }}" method="POST" class="space-y-6">
         @csrf
-        @include('marketing::admin.advertising-campaigns._form')
+        @include('marketing::admin.advertising-campaigns._form', [
+            'metaCampaigns' => $metaCampaigns ?? [],
+            'metaCampaignsError' => $metaCampaignsError ?? null,
+            'assigned' => $assigned ?? [],
+        ])
 
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 px-5 py-4 flex flex-wrap items-center gap-3">
             <button type="submit"
