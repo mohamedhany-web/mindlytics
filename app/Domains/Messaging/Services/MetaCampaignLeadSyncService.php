@@ -82,14 +82,40 @@ class MetaCampaignLeadSyncService
         }
         $adIds = array_values(array_unique($adIds));
         $formIds = array_keys($formIds);
+        $formTokens = [];
+
+        // اكتشاف فورم الصفحات / الحساب (أهم مسار لـ Instant Forms)
+        $pageForms = $this->metaAds->listLeadgenForms($this->metaAds->leadgenPageIds());
+        if ($pageForms['success'] ?? false) {
+            foreach (($pageForms['data'] ?? []) as $form) {
+                if (! is_array($form) || blank($form['id'] ?? null)) {
+                    continue;
+                }
+                $fid = (string) $form['id'];
+                $formIds[] = $fid;
+                if (! empty($form['token'])) {
+                    $formTokens[$fid] = (string) $form['token'];
+                }
+            }
+        } elseif (! empty($pageForms['error'])) {
+            Log::info('Meta campaign lead sync: page forms discovery', [
+                'campaign_id' => $metaCampaignId,
+                'error' => $pageForms['error'],
+            ]);
+        }
+        $formIds = array_values(array_unique($formIds));
 
         $created = 0;
         $updated = 0;
         $skipped = 0;
         $errors = [];
         $seenLeadgenIds = [];
+        $adLeadAttempts = 0;
+        $adLeadHits = 0;
+        $formLeadHits = 0;
         $importBatch = 'meta_camp_'.$metaCampaignId.'_'.now()->format('Ymd_His');
         $assigneeId = $this->defaultAssigneeId($advertisingCampaign, $actorUserId);
+        $adIdLookup = array_fill_keys($adIds, true);
 
         $ingestRows = function (array $rows) use (
             &$created,
@@ -101,7 +127,8 @@ class MetaCampaignLeadSyncService
             $importBatch,
             $assigneeId,
             $actorUserId,
-        ): void {
+        ): int {
+            $accepted = 0;
             foreach ($rows as $row) {
                 if (! is_array($row)) {
                     continue;
@@ -111,6 +138,7 @@ class MetaCampaignLeadSyncService
                     continue;
                 }
                 $seenLeadgenIds[$leadgenId] = true;
+                $accepted++;
 
                 $result = $this->upsertLeadgenLead(
                     $row,
@@ -127,42 +155,48 @@ class MetaCampaignLeadSyncService
                     default => $skipped++,
                 };
             }
+
+            return $accepted;
         };
 
         foreach ($adIds as $adId) {
+            $adLeadAttempts++;
             $leadsResult = $this->metaAds->listLeadsForAd($adId);
             if (! ($leadsResult['success'] ?? false)) {
                 $err = (string) ($leadsResult['error'] ?? 'فشل جلب ليدات الإعلان '.$adId);
                 if ($this->looksLikePermissionError($err)) {
                     $errors[] = $err.' — تأكد من صلاحية leads_retrieval.';
                 } else {
-                    // بعض الإعلانات ليست Lead Ads — نتخطاها بهدوء
                     Log::info('Meta campaign lead sync: ad leads skipped', ['ad_id' => $adId, 'error' => $err]);
                 }
                 continue;
             }
 
-            $ingestRows($leadsResult['data'] ?? []);
+            $adLeadHits += $ingestRows($leadsResult['data'] ?? []);
         }
 
-        // Fallback: forms المستخرجة من creative object_story_spec
         foreach ($formIds as $formId) {
-            $leadsResult = $this->metaAds->listLeadsForForm($formId);
+            $token = $formTokens[$formId] ?? null;
+            $leadsResult = $this->metaAds->listLeadsForForm($formId, 100, $token);
             if (! ($leadsResult['success'] ?? false)) {
+                $err = (string) ($leadsResult['error'] ?? '');
+                if ($this->looksLikePermissionError($err)) {
+                    $errors[] = 'فورم '.$formId.': '.$err;
+                }
                 continue;
             }
+
             $filtered = [];
             foreach (($leadsResult['data'] ?? []) as $row) {
                 if (! is_array($row)) {
                     continue;
                 }
-                $campaignFromLead = (string) ($row['campaign_id'] ?? '');
-                if ($campaignFromLead !== '' && $campaignFromLead !== $metaCampaignId) {
+                if (! $this->leadBelongsToCampaign($row, $metaCampaignId, $adIdLookup)) {
                     continue;
                 }
                 $filtered[] = $row;
             }
-            $ingestRows($filtered);
+            $formLeadHits += $ingestRows($filtered);
         }
 
         // Fallback: leads على مستوى الحساب مفلترة بالحملة
@@ -175,6 +209,9 @@ class MetaCampaignLeadSyncService
                     'campaign_id' => $metaCampaignId,
                     'error' => $accountLeads['error'],
                 ]);
+                if ($this->looksLikePermissionError((string) $accountLeads['error'])) {
+                    $errors[] = (string) $accountLeads['error'];
+                }
             }
         }
 
@@ -205,16 +242,60 @@ class MetaCampaignLeadSyncService
             $parts[] = 'تحذيرات: '.implode(' | ', array_slice($errors, 0, 2));
         }
 
+        $message = 'تم سحب ليدز الكامبين — '.implode(' · ', $parts);
+        if ($created === 0 && $updated === 0 && $skipped === 0 && $conversationsLinked === 0) {
+            $message .= sprintf(
+                ' | تشخيص: إعلانات=%d · فورم=%d · ليدات من إعلان=%d · ليدات من فورم=%d. ',
+                count($adIds),
+                count($formIds),
+                $adLeadHits,
+                $formLeadHits,
+            );
+            if (count($adIds) === 0) {
+                $message .= 'لا توجد إعلانات تحت الحملة.';
+            } elseif (count($formIds) === 0 && $adLeadHits === 0) {
+                $message .= 'غالباً الحملة مش Lead Ads Instant Form، أو مفيش صلاحية leads_retrieval / Page token. أعد الربط وفعّل الصفحات في السوشيال.';
+            } else {
+                $message .= 'اتوجدت مصادر لكن مفيش ليدات مطابقة لهذه الحملة في ميتا.';
+            }
+        }
+
         return [
             'success' => true,
-            'message' => 'تم سحب ليدز الكامبين — '.implode(' · ', $parts),
+            'message' => $message,
             'created' => $created,
             'updated' => $updated,
             'skipped' => $skipped,
             'conversations_linked' => $conversationsLinked,
             'errors' => $errors,
             'advertising_campaign_id' => $advertisingCampaign?->id,
+            'diagnostics' => [
+                'ads' => count($adIds),
+                'forms' => count($formIds),
+                'ad_lead_hits' => $adLeadHits,
+                'form_lead_hits' => $formLeadHits,
+                'ad_lead_attempts' => $adLeadAttempts,
+            ],
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     * @param  array<string, true>  $adIdLookup
+     */
+    private function leadBelongsToCampaign(array $row, string $metaCampaignId, array $adIdLookup): bool
+    {
+        $campaignFromLead = (string) ($row['campaign_id'] ?? '');
+        if ($campaignFromLead !== '') {
+            return $campaignFromLead === $metaCampaignId;
+        }
+
+        $adFromLead = (string) ($row['ad_id'] ?? '');
+        if ($adFromLead !== '' && isset($adIdLookup[$adFromLead])) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

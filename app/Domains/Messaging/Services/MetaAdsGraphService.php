@@ -388,7 +388,7 @@ class MetaAdsGraphService
         }
 
         return $this->paginateGet($adId.'/leads', [
-            'fields' => 'id,created_time,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,form_id,is_organic,field_data,custom_disclaimer_responses',
+            'fields' => 'id,created_time,ad_id,adset_id,campaign_id,form_id,field_data',
             'limit' => max(1, min(100, $limit)),
         ], 2000);
     }
@@ -398,7 +398,7 @@ class MetaAdsGraphService
      *
      * @return array{success: bool, data?: list<array<string, mixed>>, error?: string}
      */
-    public function listLeadsForForm(string $formId, int $limit = 100): array
+    public function listLeadsForForm(string $formId, int $limit = 100, ?string $accessToken = null): array
     {
         $formId = trim($formId);
         if ($formId === '') {
@@ -406,28 +406,151 @@ class MetaAdsGraphService
         }
 
         return $this->paginateGet($formId.'/leads', [
-            'fields' => 'id,created_time,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,form_id,is_organic,field_data,custom_disclaimer_responses',
+            'fields' => 'id,created_time,ad_id,adset_id,campaign_id,form_id,is_organic,field_data',
             'limit' => max(1, min(100, $limit)),
-        ], 2000);
+        ], 2000, $accessToken);
+    }
+
+    /**
+     * فورم Lead Ads للصفحات (أو حساب الإعلانات كاحتياطي).
+     *
+     * @param  list<string>  $pageIds
+     * @return array{success: bool, data?: list<array{id: string, name?: string, page_id?: string, token?: ?string}>, error?: string}
+     */
+    public function listLeadgenForms(array $pageIds = []): array
+    {
+        $formsById = [];
+        $errors = [];
+
+        foreach ($pageIds as $pageId) {
+            $pageId = trim((string) $pageId);
+            if ($pageId === '') {
+                continue;
+            }
+
+            $pageToken = null;
+            try {
+                $page = \App\Domains\Messaging\Models\MetaSocialPage::query()
+                    ->where('page_id', $pageId)
+                    ->where('is_active', true)
+                    ->first(['id', 'page_id', 'page_access_token']);
+                $pageToken = $page?->page_access_token ? trim((string) $page->page_access_token) : null;
+            } catch (\Throwable) {
+                $pageToken = null;
+            }
+
+            $result = $this->paginateGet($pageId.'/leadgen_forms', [
+                'fields' => 'id,name,status,leads_count,created_time',
+                'limit' => 100,
+            ], 300, $pageToken);
+
+            if (! ($result['success'] ?? false)) {
+                $errors[] = $pageId.': '.($result['error'] ?? 'فشل');
+                continue;
+            }
+
+            foreach (($result['data'] ?? []) as $row) {
+                if (! is_array($row) || blank($row['id'] ?? null)) {
+                    continue;
+                }
+                $id = (string) $row['id'];
+                $formsById[$id] = [
+                    'id' => $id,
+                    'name' => (string) ($row['name'] ?? $id),
+                    'page_id' => $pageId,
+                    'token' => $pageToken,
+                    'leads_count' => $row['leads_count'] ?? null,
+                ];
+            }
+        }
+
+        if ($formsById === []) {
+            $account = MetaAdsSettings::adAccountId();
+            if ($account !== '') {
+                $accountForms = $this->paginateGet($account.'/leadgen_forms', [
+                    'fields' => 'id,name,status,leads_count,page_id',
+                    'limit' => 100,
+                ], 300);
+                if ($accountForms['success'] ?? false) {
+                    foreach (($accountForms['data'] ?? []) as $row) {
+                        if (! is_array($row) || blank($row['id'] ?? null)) {
+                            continue;
+                        }
+                        $id = (string) $row['id'];
+                        $formsById[$id] = [
+                            'id' => $id,
+                            'name' => (string) ($row['name'] ?? $id),
+                            'page_id' => (string) ($row['page_id'] ?? ''),
+                            'token' => null,
+                            'leads_count' => $row['leads_count'] ?? null,
+                        ];
+                    }
+                } elseif (! empty($accountForms['error'])) {
+                    $errors[] = 'ad_account: '.$accountForms['error'];
+                }
+            }
+        }
+
+        if ($formsById === []) {
+            return [
+                'success' => false,
+                'error' => $errors !== []
+                    ? 'تعذر جلب فورم الليدز: '.implode(' | ', array_slice($errors, 0, 3))
+                    : 'لا توجد leadgen forms على الصفحات/الحساب',
+                'data' => [],
+            ];
+        }
+
+        return ['success' => true, 'data' => array_values($formsById)];
+    }
+
+    /**
+     * Page IDs to scan for leadgen forms (settings + active Meta Social pages).
+     *
+     * @return list<string>
+     */
+    public function leadgenPageIds(): array
+    {
+        $ids = [];
+        $configured = trim((string) MetaAdsSettings::pageId());
+        if ($configured !== '') {
+            $ids[] = $configured;
+        }
+
+        try {
+            $pageIds = \App\Domains\Messaging\Models\MetaSocialPage::query()
+                ->where('is_active', true)
+                ->pluck('page_id')
+                ->map(fn ($id) => trim((string) $id))
+                ->filter()
+                ->all();
+            foreach ($pageIds as $pageId) {
+                $ids[] = $pageId;
+            }
+        } catch (\Throwable) {
+            //
+        }
+
+        return array_values(array_unique($ids));
     }
 
     /**
      * @param  array<string, mixed>  $query
      * @return array{success: bool, data?: list<array<string, mixed>>, error?: string}
      */
-    protected function paginateGet(string $path, array $query, int $maxItems = 500): array
+    protected function paginateGet(string $path, array $query, int $maxItems = 500, ?string $accessToken = null): array
     {
         $rows = [];
         $nextUrl = null;
         $pages = 0;
+        $token = trim((string) ($accessToken ?: MetaAdsSettings::accessToken()));
+        if ($token === '') {
+            return ['success' => false, 'error' => 'Access Token مفقود'];
+        }
 
         do {
             $pages++;
             if ($nextUrl) {
-                $token = MetaAdsSettings::accessToken();
-                if ($token === '') {
-                    return ['success' => false, 'error' => 'Access Token مفقود'];
-                }
                 try {
                     $response = Http::timeout(45)->get($nextUrl);
                     $json = $response->json();
@@ -445,7 +568,7 @@ class MetaAdsGraphService
                         : ['success' => true, 'data' => $rows, 'error' => $e->getMessage()];
                 }
             } else {
-                $result = $this->get($path, $query);
+                $result = $this->requestWithToken('get', $path, $query, $token);
                 if (! ($result['success'] ?? false)) {
                     return $result;
                 }
@@ -725,7 +848,16 @@ class MetaAdsGraphService
      */
     protected function request(string $method, string $path, array $params = []): array
     {
-        $token = MetaAdsSettings::accessToken();
+        return $this->requestWithToken($method, $path, $params, MetaAdsSettings::accessToken());
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
+     * @return array{success: bool, data?: array<string, mixed>, error?: string}
+     */
+    protected function requestWithToken(string $method, string $path, array $params, string $token): array
+    {
+        $token = trim($token);
         if ($token === '') {
             return ['success' => false, 'error' => 'Access Token مفقود'];
         }
