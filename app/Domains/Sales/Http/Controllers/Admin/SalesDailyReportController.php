@@ -41,8 +41,11 @@ class SalesDailyReportController extends Controller
         return view('sales::admin.daily-reports.index', compact('reports', 'reps', 'from', 'to', 'userId', 'status', 'settings', 'stats', 'penaltiesSynced'));
     }
 
-    public function show(int $id, SalesDailyReportService $service): View
-    {
+    public function show(
+        int $id,
+        SalesDailyReportService $service,
+        \App\Domains\Sales\Services\SalesReportActualsService $actuals,
+    ): View {
         $report = \App\Domains\Sales\Models\SalesDailyReport::with(['user', 'contacts.lead', 'autoDeduction'])->findOrFail($id);
         $kpiComparison = $report->user
             ? $service->kpiComparisonForReport($report->user, $report, $report->report_date)
@@ -50,8 +53,11 @@ class SalesDailyReportController extends Controller
         $dayActivities = $report->user
             ? $service->activitiesForUserOnDate($report->user, $report->report_date)
             : collect();
+        $actualsDiff = $report->user
+            ? $actuals->compareReportToActuals($report)
+            : null;
 
-        return view('sales::admin.daily-reports.show', compact('report', 'kpiComparison', 'dayActivities'));
+        return view('sales::admin.daily-reports.show', compact('report', 'kpiComparison', 'dayActivities', 'actualsDiff'));
     }
 
     public function export(Request $request, SalesDailyReportService $service, SalesDailyReportsExcelExportService $excel): StreamedResponse

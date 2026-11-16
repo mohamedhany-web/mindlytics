@@ -79,6 +79,8 @@ Route::get('presence/poll', [SalesManagerPresenceController::class, 'poll'])->na
 Route::post('presence/violations/{violation}/acknowledge', [SalesManagerPresenceController::class, 'acknowledge'])->name('presence.acknowledge');
 Route::get('daily-reports', [SalesManagerDailyReportController::class, 'index'])->name('daily-reports.index');
 Route::get('daily-reports/{report}', [SalesManagerDailyReportController::class, 'show'])->name('daily-reports.show');
+Route::get('report-accuracy', [\App\Domains\Sales\Http\Controllers\Employee\SalesManagerReportAccuracyController::class, 'index'])->name('report-accuracy.index');
+Route::get('report-accuracy/{report}', [\App\Domains\Sales\Http\Controllers\Employee\SalesManagerReportAccuracyController::class, 'show'])->name('report-accuracy.show');
 Route::get('commissions', [SalesManagerCommissionController::class, 'index'])->name('commissions.index');
 Route::get('commissions/{employee}', [SalesManagerCommissionController::class, 'show'])->name('commissions.show')->whereNumber('employee');
 Route::get('team-reports', [SalesManagerDailyReportController::class, 'teamReports'])->name('team-reports.index');

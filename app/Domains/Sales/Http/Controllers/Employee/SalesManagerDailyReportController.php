@@ -67,6 +67,7 @@ class SalesManagerDailyReportController extends Controller
         SalesDailyReport $report,
         CampaignReportService $campaigns,
         \App\Domains\Sales\Services\SalesDailyReportService $service,
+        \App\Domains\Sales\Services\SalesReportActualsService $actuals,
     ) {
         $this->authorizeTeamReport($report);
         $report->load(['user', 'contacts.lead', 'autoDeduction']);
@@ -82,6 +83,9 @@ class SalesManagerDailyReportController extends Controller
         $dayActivities = $report->user
             ? $service->activitiesForUserOnDate($report->user, $report->report_date)
             : collect();
+        $actualsDiff = $report->user
+            ? $actuals->compareReportToActuals($report)
+            : null;
 
         $campaignEntries = collect();
         if ($campaigns->tablesReady() && Schema::hasTable('campaign_daily_reports')) {
@@ -98,6 +102,7 @@ class SalesManagerDailyReportController extends Controller
             'campaignEntries',
             'kpiComparison',
             'dayActivities',
+            'actualsDiff',
         ));
     }
 

@@ -170,6 +170,68 @@
         </section>
     </div>
 
+    @php $accuracyRows = $reportAccuracyBoard['rows'] ?? []; @endphp
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+                <h3 class="text-sm font-black text-slate-900">مطابقة التقارير اليومية (أسماء + أرقام)</h3>
+                <p class="text-[11px] text-slate-500 mt-0.5">
+                    @if(!empty($metaLink['linked']))
+                        مربوط بـ Meta: <span class="font-semibold" dir="ltr">{{ $metaLink['label'] }}</span>
+                    @else
+                        غير مربوط بـ Meta —
+                        @if(Route::has('admin.meta-social.agents.index'))
+                            <a href="{{ route('admin.meta-social.agents.index') }}" class="text-sky-700 font-semibold underline">ربط الاكونت</a>
+                        @endif
+                    @endif
+                </p>
+            </div>
+            <span class="text-xs font-semibold text-slate-600">
+                متوسط الدقة:
+                {{ ($reportAccuracyBoard['summary']['accuracy_pct'] ?? null) !== null
+                    ? number_format((float) $reportAccuracyBoard['summary']['accuracy_pct'], 1).'%'
+                    : '—' }}
+            </span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-white text-xs text-slate-500 border-b border-slate-100">
+                <tr>
+                    <th class="px-3 py-2 text-right">اليوم</th>
+                    <th class="px-3 py-2 text-right">الدقة</th>
+                    <th class="px-3 py-2 text-right">مكالمات س/ف</th>
+                    <th class="px-3 py-2 text-right">ردود س/ف</th>
+                    <th class="px-3 py-2 text-right">أسماء متطابقة / اختلاف</th>
+                    <th class="px-3 py-2 text-right"></th>
+                </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                @forelse($accuracyRows as $ar)
+                    <tr>
+                        <td class="px-3 py-2 font-mono text-xs">{{ $ar['report_date'] }}</td>
+                        <td class="px-3 py-2 font-black">{{ number_format((float) $ar['accuracy_pct'], 1) }}%</td>
+                        <td class="px-3 py-2 text-xs tabular-nums">{{ $ar['submitted']['calls_made'] }} / {{ $ar['actual']['calls_made'] }}</td>
+                        <td class="px-3 py-2 text-xs tabular-nums">{{ $ar['submitted']['messages_replied'] }} / {{ $ar['actual']['messages_replied'] }}</td>
+                        <td class="px-3 py-2 text-xs text-slate-600">
+                            {{ $ar['matched_contacts'] }} متطابق
+                            · {{ $ar['report_only_contacts'] }} تقرير فقط
+                            · {{ $ar['actual_only_contacts'] }} فعلي فقط
+                        </td>
+                        <td class="px-3 py-2">
+                            <a href="{{ route('admin.sales.daily-reports.show', $ar['report_id']) }}"
+                               class="text-xs font-bold text-sky-700 hover:underline">فتح اليوم</a>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="6" class="px-4 py-8 text-center text-slate-500 text-sm">لا تقارير مسلَّمة في الفترة.</td>
+                    </tr>
+                @endforelse
+                </tbody>
+            </table>
+        </div>
+    </section>
+
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
             <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex justify-between">

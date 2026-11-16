@@ -97,6 +97,11 @@
         </section>
     @endif
 
+    @include('sales::partials.report-actuals-diff', [
+        'diff' => $actualsDiff ?? null,
+        'leadShowRoute' => fn ($id) => route('employee.sales-manager.leads.show', $id),
+    ])
+
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
         {{-- نشاط اليوم --}}
         <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden h-full" id="day-activity">

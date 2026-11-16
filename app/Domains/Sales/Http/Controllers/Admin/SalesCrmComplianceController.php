@@ -87,8 +87,12 @@ class SalesCrmComplianceController extends Controller
         ]);
     }
 
-    public function show(Request $request, User $employee, SalesCrmComplianceService $compliance): View
-    {
+    public function show(
+        Request $request,
+        User $employee,
+        SalesCrmComplianceService $compliance,
+        \App\Domains\Sales\Services\SalesReportActualsService $actuals,
+    ): View {
         abort_unless($employee->isSalesEmployee(), 404);
 
         $validated = $request->validate([
@@ -100,6 +104,8 @@ class SalesCrmComplianceController extends Controller
         $period = $validated['period'] ?? 'week';
         [$from, $to] = $this->rangeFor($period, $validated);
         $row = $compliance->buildEmployee($employee, $from, $to);
+        $reportAccuracyBoard = $actuals->periodBoard([$employee], $from, $to);
+        $metaLink = $actuals->metaLinkStatus($employee);
 
         return view('sales::admin.crm-compliance.show', [
             'row' => $row,
@@ -107,6 +113,8 @@ class SalesCrmComplianceController extends Controller
             'period' => $period,
             'dateFrom' => $from->toDateString(),
             'dateTo' => $to->toDateString(),
+            'reportAccuracyBoard' => $reportAccuracyBoard,
+            'metaLink' => $metaLink,
         ]);
     }
 
