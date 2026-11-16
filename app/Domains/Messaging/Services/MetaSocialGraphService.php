@@ -64,17 +64,22 @@ class MetaSocialGraphService
         ];
     }
 
-    public function oauthLoginUrl(string $state): string
+    public function oauthLoginUrl(string $state, bool $forceReauth = false): string
     {
-        $params = http_build_query([
+        $params = [
             'client_id' => MetaSocialSettings::appId(),
             'redirect_uri' => MetaSocialSettings::oauthRedirectUrl(),
             'state' => $state,
             'scope' => MetaSocialSettings::oauthScopes(),
             'response_type' => 'code',
-        ]);
+        ];
 
-        return 'https://www.facebook.com/' . MetaSocialSettings::graphVersion() . '/dialog/oauth?' . $params;
+        // يعيد طلب صلاحيات Ads حتى لو المستخدم رفضها سابقاً
+        if ($forceReauth) {
+            $params['auth_type'] = 'rerequest';
+        }
+
+        return 'https://www.facebook.com/' . MetaSocialSettings::graphVersion() . '/dialog/oauth?' . http_build_query($params);
     }
 
     /**

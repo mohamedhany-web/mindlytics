@@ -29,15 +29,21 @@ class MetaSocialOAuthController extends Controller
                 ->with('error', 'أكمل App ID و App Secret قبل الربط');
         }
 
+        MetaSocialSettings::ensureAdsScopesPersisted();
+
         $state = Str::random(40);
         $request->session()->put('meta_social_oauth_state', $state);
+        $forceAds = $request->boolean('force_ads') || $request->boolean('ads');
+        if ($forceAds) {
+            $request->session()->put('meta_social_oauth_return', 'admin.meta-ads.settings');
+        }
 
         $userId = auth()->id();
         if ($userId) {
             Cache::put($this->oauthStateCacheKey($state), $userId, now()->addMinutes(20));
         }
 
-        return redirect()->away($this->graph->oauthLoginUrl($state));
+        return redirect()->away($this->graph->oauthLoginUrl($state, $forceAds));
     }
 
     public function callback(Request $request): RedirectResponse
@@ -113,6 +119,12 @@ class MetaSocialOAuthController extends Controller
 
             $synced = (int) ($sync['synced'] ?? 0);
             $accounts = (int) ($sync['connections'] ?? 1);
+            $returnRoute = (string) $request->session()->pull('meta_social_oauth_return', '');
+
+            if ($returnRoute === 'admin.meta-ads.settings') {
+                return redirect()->route('admin.meta-ads.settings')
+                    ->with('success', "تم إعادة ربط Meta بصلاحيات الإعلانات — تم جلب {$synced} صفحة. اختر Ad Account ثم افتح الحملات.");
+            }
 
             return redirect()->route('admin.meta-social.pages.index', ['pick' => 1])
                 ->with('success', "تم ربط Meta — تم جلب {$synced} صفحة من {$accounts} حساب. اختر الصفحات التي تريد تفعيلها.");

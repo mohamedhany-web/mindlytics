@@ -17,7 +17,31 @@
         <div class="rounded-xl bg-rose-50 border border-rose-200 text-rose-900 px-4 py-3 text-sm font-medium">{{ session('error') }}</div>
     @endif
     @if(!empty($error))
-        <div class="rounded-xl bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 text-sm font-medium">{{ $error }}</div>
+        @php
+            $isAdsPerm = str_contains(strtolower($error), 'ads_management')
+                || str_contains(strtolower($error), 'ads_read')
+                || str_contains($error, '#200')
+                || str_contains(strtolower($error), 'permission');
+        @endphp
+        <div class="rounded-xl border px-4 py-4 text-sm {{ $isAdsPerm ? 'bg-amber-50 border-amber-300 text-amber-950' : 'bg-rose-50 border-rose-200 text-rose-900' }}">
+            <p class="font-bold mb-1">تعذر جلب الحملات من ميتا</p>
+            <p class="text-xs leading-relaxed opacity-90" dir="ltr">{{ $error }}</p>
+            @if($isAdsPerm)
+                <div class="mt-3 space-y-2 text-xs leading-relaxed">
+                    <p>الحل: أعد ربط Meta بحساب يملك صلاحية على الـ Ad Account، ووافق على صلاحيات الإعلانات.</p>
+                    <div class="flex flex-wrap gap-2">
+                        <a href="{{ route('admin.meta-social.oauth.redirect', ['force_ads' => 1]) }}"
+                           class="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700">
+                            <i class="fab fa-meta"></i> إعادة ربط Meta (صلاحيات Ads)
+                        </a>
+                        <a href="{{ route('admin.meta-ads.settings') }}"
+                           class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-amber-300 bg-white text-amber-900 font-bold hover:bg-amber-100">
+                            <i class="fas fa-cog"></i> إعدادات Meta Ads
+                        </a>
+                    </div>
+                </div>
+            @endif
+        </div>
     @endif
 
     <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">

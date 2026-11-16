@@ -46,7 +46,7 @@
             <a href="{{ route('admin.meta-ads.settings') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                 <i class="fas fa-sync"></i> تحديث الحسابات
             </a>
-            <a href="{{ $oauthLoginUrl ?? route('admin.meta-social.oauth.redirect') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">
+            <a href="{{ $oauthLoginUrl ?? route('admin.meta-social.oauth.redirect', ['force_ads' => 1]) }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">
                 <i class="fab fa-meta"></i> إعادة ربط Meta (صلاحيات Ads)
             </a>
             @if(($s['ad_account_id'] ?? '') !== '')
@@ -70,10 +70,21 @@
             </p>
         @endif
         @if($needsAdsReauth)
-            <div class="mt-3 rounded-lg bg-white/70 border border-amber-200 px-3 py-2 text-amber-950 text-xs leading-relaxed">
-                <strong>مطلوب مرة واحدة:</strong> التوكن الحالي من السوشيال بدون صلاحيات الإعلانات.
-                اضغط <strong>«إعادة ربط Meta»</strong> ووافق على <code class="font-mono">ads_management</code> و <code class="font-mono">ads_read</code>
-                ثم ارجع لهذه الصفحة لاختيار الحساب.
+            <div class="mt-3 rounded-lg bg-white/70 border border-amber-200 px-3 py-2 text-amber-950 text-xs leading-relaxed space-y-2">
+                <p>
+                    <strong>مطلوب:</strong> Meta رفضت قراءة حساب الإعلانات (#200) — غالباً التوكن بدون موافقة
+                    <code class="font-mono">ads_management</code> / <code class="font-mono">ads_read</code>
+                    أو المستخدم المربوط مش Admin على الـ Ad Account.
+                </p>
+                <ol class="list-decimal pr-5 space-y-1">
+                    <li>اضغط <strong>«إعادة ربط Meta (صلاحيات Ads)»</strong> ووافق على كل صلاحيات الإعلانات (لا تتخطّاها).</li>
+                    <li>في Business Manager تأكد إن نفس الحساب Admin / Advertiser على Ad Account المستخدم.</li>
+                    <li>ارجع هنا واختر الحساب ثم افتح الحملات.</li>
+                </ol>
+                <a href="{{ $oauthLoginUrl ?? route('admin.meta-social.oauth.redirect', ['force_ads' => 1]) }}"
+                   class="inline-flex items-center gap-2 mt-1 px-3 py-2 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700">
+                    <i class="fab fa-meta"></i> إعادة ربط الآن بصلاحيات Ads
+                </a>
             </div>
         @endif
     </div>

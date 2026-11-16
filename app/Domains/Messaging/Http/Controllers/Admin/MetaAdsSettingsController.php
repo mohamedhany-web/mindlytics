@@ -35,6 +35,16 @@ class MetaAdsSettingsController extends Controller
                 && ! in_array('ads_management', $permissions, true);
         }
 
+        if (! ($connection['success'] ?? false)) {
+            $connError = strtolower((string) ($connection['error'] ?? ''));
+            if (str_contains($connError, 'ads_management')
+                || str_contains($connError, 'ads_read')
+                || str_contains($connError, '#200')
+                || str_contains($connError, 'permission')) {
+                $needsAdsReauth = true;
+            }
+        }
+
         return view('messaging::admin.meta-ads.settings', [
             'settings' => $settings,
             'connection' => $connection,
@@ -42,7 +52,7 @@ class MetaAdsSettingsController extends Controller
             'adAccountsError' => $adAccountsError,
             'permissions' => $permissions,
             'needsAdsReauth' => $needsAdsReauth,
-            'oauthLoginUrl' => route('admin.meta-social.oauth.redirect'),
+            'oauthLoginUrl' => route('admin.meta-social.oauth.redirect', ['force_ads' => 1]),
         ]);
     }
 
