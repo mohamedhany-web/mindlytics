@@ -326,7 +326,7 @@ class MetaCampaignLeadSyncService
         );
 
         try {
-            $history = $this->inbox->syncHistoryFromMeta(null, 8);
+            $history = $this->inbox->syncHistoryFromMeta(null, 40);
             if ($history['success'] ?? false) {
                 $inboxSync = [
                     'synced' => (int) ($history['synced'] ?? 0),
@@ -642,8 +642,8 @@ class MetaCampaignLeadSyncService
             $conversationIds = array_values(array_unique(array_merge($conversationIds, $fromMessages)));
         }
 
-        // للحملات الرسائل: لو مفيش إحالة، اسحب المحادثات داخل فترة تشغيل الكامبين
-        if ($includeMessagingWindowFallback && $conversationIds === [] && ($campaignWindow['from'] ?? null)) {
+        // للحملات الرسائل: ادمج كل محادثات فترة تشغيل الكامبين (مش بس أول 500)
+        if ($includeMessagingWindowFallback && ($campaignWindow['from'] ?? null)) {
             $windowQuery = MetaSocialConversation::query()
                 ->where(function ($q) use ($metaCampaignId) {
                     $q->whereNull('meta_campaign_id')
@@ -655,12 +655,15 @@ class MetaCampaignLeadSyncService
             if ($campaignWindow['to']) {
                 $windowQuery->where('last_message_at', '<=', $campaignWindow['to']);
             }
-            $conversationIds = $windowQuery
-                ->orderByDesc('last_message_at')
-                ->limit(500)
-                ->pluck('id')
-                ->map(fn ($id) => (int) $id)
-                ->all();
+
+            $windowIds = [];
+            $windowQuery->orderBy('id')->select('id')->chunkById(1000, function ($chunk) use (&$windowIds) {
+                foreach ($chunk as $row) {
+                    $windowIds[] = (int) $row->id;
+                }
+            });
+
+            $conversationIds = array_values(array_unique(array_merge($conversationIds, $windowIds)));
         }
 
         if ($conversationIds === []) {
@@ -668,71 +671,73 @@ class MetaCampaignLeadSyncService
         }
 
         $linked = 0;
-        foreach (MetaSocialConversation::query()->whereIn('id', $conversationIds)->cursor() as $conversation) {
-            /** @var MetaSocialConversation $conversation */
-            try {
-                $this->contactCapture->scanConversationHistory($conversation);
-            } catch (\Throwable) {
-                //
-            }
-
-            $conversation->refresh();
-            if (! $conversation->meta_campaign_id) {
-                $conversation->meta_campaign_id = $metaCampaignId;
-            }
-            if (! $conversation->meta_ad_id && count($adIds) === 1) {
-                $conversation->meta_ad_id = $adIds[0];
-            }
-            $conversation->save();
-
-            $lead = null;
-            if ($conversation->sales_lead_id) {
-                $lead = SalesLead::query()->find($conversation->sales_lead_id);
-            }
-
-            if (! $lead) {
+        foreach (array_chunk($conversationIds, 500) as $idChunk) {
+            foreach (MetaSocialConversation::query()->whereIn('id', $idChunk)->cursor() as $conversation) {
+                /** @var MetaSocialConversation $conversation */
                 try {
-                    if ($assigneeId && $this->crm->isEligibleAgent($assigneeId)) {
-                        $lead = $this->crm->createLeadFromConversation(
-                            $conversation,
-                            $assigneeId,
-                            $actorUserId,
-                        );
-                    } else {
-                        $lead = $this->createConversationLeadWithoutAssignee(
-                            $conversation,
-                            $metaCampaignId,
-                            $advertisingCampaign,
-                            $importBatch,
-                            $actorUserId,
-                        );
+                    $this->contactCapture->scanConversationHistory($conversation);
+                } catch (\Throwable) {
+                    //
+                }
+
+                $conversation->refresh();
+                if (! $conversation->meta_campaign_id) {
+                    $conversation->meta_campaign_id = $metaCampaignId;
+                }
+                if (! $conversation->meta_ad_id && count($adIds) === 1) {
+                    $conversation->meta_ad_id = $adIds[0];
+                }
+                $conversation->save();
+
+                $lead = null;
+                if ($conversation->sales_lead_id) {
+                    $lead = SalesLead::query()->find($conversation->sales_lead_id);
+                }
+
+                if (! $lead) {
+                    try {
+                        if ($assigneeId && $this->crm->isEligibleAgent($assigneeId)) {
+                            $lead = $this->crm->createLeadFromConversation(
+                                $conversation,
+                                $assigneeId,
+                                $actorUserId,
+                            );
+                        } else {
+                            $lead = $this->createConversationLeadWithoutAssignee(
+                                $conversation,
+                                $metaCampaignId,
+                                $advertisingCampaign,
+                                $importBatch,
+                                $actorUserId,
+                            );
+                        }
+                    } catch (\Throwable $e) {
+                        Log::warning('Meta campaign conversation sync failed', [
+                            'conversation_id' => $conversation->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                        continue;
                     }
-                } catch (\Throwable $e) {
-                    Log::warning('Meta campaign conversation sync failed', [
-                        'conversation_id' => $conversation->id,
-                        'error' => $e->getMessage(),
-                    ]);
+                }
+
+                if (! $lead) {
                     continue;
                 }
-            }
 
-            if (! $lead) {
-                continue;
-            }
+                $updates = array_filter([
+                    'meta_campaign_id' => $metaCampaignId,
+                    'meta_ad_id' => $conversation->meta_ad_id ?: $lead->meta_ad_id,
+                    'advertising_campaign_id' => $advertisingCampaign?->id ?? $lead->advertising_campaign_id,
+                    'source' => in_array((string) $lead->source, ['social', 'other', ''], true) ? 'meta_ads' : $lead->source,
+                    'import_batch' => $importBatch,
+                ], static fn ($v) => $v !== null && $v !== '');
 
-            $updates = array_filter([
-                'meta_campaign_id' => $metaCampaignId,
-                'meta_ad_id' => $conversation->meta_ad_id ?: $lead->meta_ad_id,
-                'advertising_campaign_id' => $advertisingCampaign?->id ?? $lead->advertising_campaign_id,
-                'source' => in_array((string) $lead->source, ['social', 'other', ''], true) ? 'meta_ads' : $lead->source,
-                'import_batch' => $importBatch,
-            ], static fn ($v) => $v !== null && $v !== '');
+                $lead->fill($updates)->save();
+                $linked++;
 
-            $lead->fill($updates)->save();
-            $linked++;
-
-            if ($onProgress && ($linked === 1 || $linked % 3 === 0)) {
-                $onProgress($linked);
+                if ($onProgress && ($linked === 1 || $linked % 10 === 0)) {
+                    $onProgress($linked);
+                }
             }
         }
 
