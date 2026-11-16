@@ -12,7 +12,10 @@
         'today' => ['متابعات النهارده', $quickCounts['today']],
         'overdue' => ['متأخر', $quickCounts['overdue']],
         'new' => ['جدد', $quickCounts['new']],
-        'stale' => ['بلا حركة 10 أيام', $quickCounts['stale']],
+        'untouched' => ['ما اتكلمش خالص', $quickCounts['untouched']],
+        'no_next' => ['من غير خطوة جاية', $quickCounts['no_next']],
+        'stale' => ['راكد '.SalesLead::STALE_CONTACT_DAYS.' أيام', $quickCounts['stale']],
+        'pending_win' => $filters['quick'] === 'pending_win' ? ['صفقة مستنية اعتماد', null] : null,
         'meta' => ['إعلانات Meta', null],
         'unassigned' => $crm->isAdmin() ? ['بلا موظف', $quickCounts['unassigned']] : null,
     ]);

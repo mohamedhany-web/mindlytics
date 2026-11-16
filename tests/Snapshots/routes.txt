@@ -394,6 +394,7 @@ GET|HEAD employee/sales/course-board [employee.sales.course-board.index] {web,au
 GET|HEAD employee/sales/policy [employee.sales.policy.index] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/crm [employee.crm.home] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/crm/leads [employee.crm.leads.index] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
+GET|HEAD employee/crm/leads-health [employee.crm.leads.health] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/crm/leads/create [employee.crm.leads.create] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 POST employee/crm/leads/bulk [employee.crm.leads.bulk] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/crm/leads/{lead}/edit [employee.crm.leads.edit] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
@@ -746,6 +747,7 @@ PUT admin/sales/categories/{category} [admin.sales.categories.update] {web,auth,
 DELETE admin/sales/categories/{category} [admin.sales.categories.destroy] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/crm [admin.crm.home] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/crm/leads [admin.crm.leads.index] {web,auth,prevent-concurrent,role:admin|super_admin}
+GET|HEAD admin/crm/leads-health [admin.crm.leads.health] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/crm/leads/create [admin.crm.leads.create] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/crm/leads/bulk [admin.crm.leads.bulk] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/crm/leads/{lead}/edit [admin.crm.leads.edit] {web,auth,prevent-concurrent,role:admin|super_admin}

@@ -15,6 +15,7 @@ use App\Domains\Sales\Models\SalesInterestType;
 use App\Domains\Sales\Models\SalesLead;
 use App\Domains\Sales\Models\SalesLeadTransfer;
 use App\Domains\Sales\Models\SalesShiftSwapRequest;
+use App\Domains\Sales\Services\SalesLeadHealthService;
 use App\Domains\Sales\Services\SalesDailyResultService;
 use App\Domains\Sales\Services\SalesLeadOrderLinker;
 use App\Domains\Sales\Services\SalesLeadTransferService;
@@ -346,7 +347,7 @@ class SalesCrmController extends Controller
     private function leadFilters(Request $request, CrmScope $scope): array
     {
         $quick = (string) $request->query('quick', $scope->isRep() ? 'mine' : 'all');
-        $allowed = ['all', 'mine', 'today', 'overdue', 'new', 'meta', 'stale'];
+        $allowed = ['all', 'mine', 'today', 'overdue', 'new', 'meta', 'stale', 'untouched', 'no_next', 'pending_win'];
         if ($scope->isAdmin()) {
             $allowed[] = 'unassigned';
         }
@@ -370,10 +371,10 @@ class SalesCrmController extends Controller
         match ($f['quick']) {
             'mine' => $query->where('assigned_to', $scope->user->id),
             'today' => $query->openPipeline()->whereBetween('next_follow_up_at', [today(), today()->endOfDay()]),
-            'overdue' => $query->openPipeline()->whereNotIn('stage', SalesLead::WON_LIKE_STAGES)->where('next_follow_up_at', '<', now()),
             'new' => $query->where('stage', 'new_lead'),
             'meta' => $query->where(fn ($q) => $q->where('source', 'social')->orWhereHas('metaSocialConversations')),
-            'stale' => $query->openPipeline()->whereNotIn('stage', SalesLead::WON_LIKE_STAGES)->where('updated_at', '<', now()->subDays(10)),
+            // نفس تعريفات «حالة العملاء» بالظبط، عشان الرقم اللي في اللوحة يطابق القايمة
+            'overdue', 'stale', 'untouched', 'no_next', 'pending_win' => SalesLeadHealthService::apply($query, $f['quick']),
             default => null,
         };
 
@@ -406,13 +407,13 @@ class SalesCrmController extends Controller
     /** @return array<string, int> */
     private function quickCounts(CrmScope $scope): array
     {
-        $open = fn () => $scope->leads()->openPipeline()->whereNotIn('stage', SalesLead::WON_LIKE_STAGES);
-
         return [
             'today' => $scope->leads()->openPipeline()->whereBetween('next_follow_up_at', [today(), today()->endOfDay()])->count(),
-            'overdue' => $open()->where('next_follow_up_at', '<', now())->count(),
+            'overdue' => SalesLeadHealthService::apply($scope->leads(), 'overdue')->count(),
             'new' => $scope->leads()->where('stage', 'new_lead')->count(),
-            'stale' => $open()->where('updated_at', '<', now()->subDays(10))->count(),
+            'stale' => SalesLeadHealthService::apply($scope->leads(), 'stale')->count(),
+            'untouched' => SalesLeadHealthService::apply($scope->leads(), 'untouched')->count(),
+            'no_next' => SalesLeadHealthService::apply($scope->leads(), 'no_next')->count(),
             'unassigned' => $scope->isAdmin() ? SalesLead::query()->where(fn ($q) => $q->whereNull('assigned_to')->orWhere('assigned_to', 0))->count() : 0,
         ];
     }

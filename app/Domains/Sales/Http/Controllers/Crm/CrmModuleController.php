@@ -11,6 +11,7 @@ use App\Domains\Sales\Models\CrmContact;
 use App\Domains\Sales\Models\CrmDocument;
 use App\Domains\Sales\Models\SalesActivity;
 use App\Domains\Sales\Models\SalesLead;
+use App\Domains\Sales\Services\SalesLeadHealthService;
 use App\Domains\Sales\Support\CrmScope;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
@@ -239,6 +240,10 @@ class CrmModuleController extends Controller
         $data['user_id'] = $scope->user->id;
         $data['status'] = $data['status'] ?? 'planned';
         $activity = SalesActivity::create($data);
+        // مكالمة/رسالة اتعملت فعلاً = «آخر تواصل» للعميل (اللي بيتحسب منه الراكد في حالة العملاء)
+        if (isset($lead) && SalesLeadHealthService::isContact($data['type'], $data['status'])) {
+            $lead->touchLastContactFromActivity($data['type']);
+        }
 
         return redirect()->route($scope->route('activities.show'), $activity)->with('success', 'تم تسجيل النشاط.');
     }

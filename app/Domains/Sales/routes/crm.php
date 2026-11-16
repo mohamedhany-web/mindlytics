@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\Sales\Http\Controllers\Crm\CrmAccessController;
+use App\Domains\Sales\Http\Controllers\Crm\CrmLeadHealthController;
 use App\Domains\Sales\Http\Controllers\Crm\CrmLeadToolsController;
 use App\Domains\Sales\Http\Controllers\Crm\CrmModuleController;
 use App\Domains\Sales\Http\Controllers\Crm\CrmSocialReportController;
@@ -15,6 +16,7 @@ Route::get('/', [SalesCrmController::class, 'home'])->name('home');
 
 // Leads / Opportunities
 Route::get('leads', [SalesCrmController::class, 'leads'])->name('leads.index');
+Route::get('leads-health', [CrmLeadHealthController::class, 'index'])->name('leads.health');
 Route::get('leads/create', [SalesCrmController::class, 'leadCreate'])->name('leads.create');
 Route::post('leads/bulk', [SalesCrmController::class, 'bulk'])->name('leads.bulk');
 Route::get('leads/{lead}/edit', [SalesCrmController::class, 'leadEdit'])->whereNumber('lead')->name('leads.edit');

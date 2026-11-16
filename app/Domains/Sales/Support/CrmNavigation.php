@@ -36,6 +36,7 @@ final class CrmNavigation
                 'key' => 'leads', 'label' => 'العملاء المحتملون', 'route' => $c.'leads.index',
                 'items' => array_values(array_filter([
                     ['عرض العملاء المحتملين', $c.'leads.index'],
+                    $scope->isRep() ? null : ['حالة العملاء', $c.'leads.health'],
                     ['＋ عميل محتمل', $c.'leads.create'],
                     $scope->isRep() ? ['مجموعات العملاء', 'employee.sales.groups.index'] : null,
                     $scope->isAdmin() ? ['مجموعات العملاء', 'admin.sales.groups.index'] : null,
@@ -155,6 +156,7 @@ final class CrmNavigation
                 'key' => 'admin', 'label' => $scope->isManager() ? 'إدارة الفريق' : 'الإدارة', 'route' => $c.'admin.index',
                 'items' => array_values(array_filter([
                     ['لوحة إدارة CRM', $c.'admin.index'],
+                    $scope->isRep() ? null : ['حالة العملاء', $c.'leads.health'],
                     $scope->isAdmin() ? ['اعتماد الفوز', $c.'win-approvals.index'] : null,
                     $scope->isAdmin() ? ['اعتماد الفوز (تفصيلي)', 'admin.sales.win-approvals.index'] : null,
                     $scope->isAdmin() ? ['لوحة التوزيع', 'admin.sales.distribution.index'] : null,
